@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { proxyPatch } from "../../../_proxy";
+import { proxyPatch } from "@/app/api/_proxy";
 
 export async function PATCH(
   req: NextRequest,

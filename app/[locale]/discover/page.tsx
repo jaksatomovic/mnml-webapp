@@ -49,6 +49,28 @@ interface Device {
   status: string;
 }
 
+interface InstalledPlugin {
+  plugin_id: string;
+  version: string;
+  custom_mode_id: string;
+  manifest?: {
+    name?: string;
+    signature?: string;
+    permissions_obj?: {
+      allowed_domains?: string[];
+    };
+  };
+  installed_at?: string;
+  updated_at?: string;
+}
+
+interface PluginEvent {
+  plugin_id: string;
+  event_type: string;
+  version: string;
+  created_at: string;
+}
+
 export default function DiscoverPage() {
   const pathname = usePathname();
   const locale = localeFromPathname(pathname || "/");
@@ -59,7 +81,9 @@ export default function DiscoverPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isUploadingPlugin, setIsUploadingPlugin] = useState(false);
   const [publishStatus, setPublishStatus] = useState<string>("");
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -78,6 +102,10 @@ export default function DiscoverPage() {
   // Device list for install and publish actions.
   const [devices, setDevices] = useState<Device[]>([]);
   const [isLoadingDevices, setIsLoadingDevices] = useState(false);
+  const [installTargetMac, setInstallTargetMac] = useState("");
+  const [installedPlugins, setInstalledPlugins] = useState<InstalledPlugin[]>([]);
+  const [removingPluginId, setRemovingPluginId] = useState<string | null>(null);
+  const [pluginEvents, setPluginEvents] = useState<PluginEvent[]>([]);
   
   // Publish form state.
   const [publishForm, setPublishForm] = useState({
@@ -86,6 +114,12 @@ export default function DiscoverPage() {
     description: "",
     category: "",
     mac: "",
+  });
+  const [uploadForm, setUploadForm] = useState({
+    mac: "",
+    fileName: "",
+    fileContent: "",
+    fileBase64: "",
   });
   
   // Device picker used when installing a mode.
@@ -137,7 +171,11 @@ export default function DiscoverPage() {
       }
 
       const data = await response.json();
-      setDevices(data.devices || []);
+      const deviceList = data.devices || [];
+      setDevices(deviceList);
+      if (deviceList.length > 0) {
+        setInstallTargetMac((prev) => prev || deviceList[0].mac);
+      }
     } catch (err) {
       console.error("Failed to fetch devices:", err);
       setDevices([]);
@@ -145,6 +183,56 @@ export default function DiscoverPage() {
       setIsLoadingDevices(false);
     }
   }, [tr]);
+
+  const fetchInstalledModes = useCallback(async (mac: string) => {
+    if (!mac) return;
+    try {
+      const params = new URLSearchParams({ mac });
+      const response = await fetch(`/api/discover/modes/installed?${params.toString()}`, {
+        headers: authHeaders(),
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      const ids = new Set<number>(
+        (data.installed || [])
+          .map((it: { shared_mode_id?: number }) => Number(it?.shared_mode_id))
+          .filter((n: number) => Number.isFinite(n))
+      );
+      setInstalledModes(ids);
+    } catch {
+      // no-op: keep UI usable even if lookup fails
+    }
+  }, []);
+
+  const fetchInstalledPlugins = useCallback(async (mac: string) => {
+    if (!mac) return;
+    try {
+      const params = new URLSearchParams({ mac });
+      const response = await fetch(`/api/discover/plugins/installed?${params.toString()}`, {
+        headers: authHeaders(),
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      setInstalledPlugins(data.plugins || []);
+    } catch {
+      setInstalledPlugins([]);
+    }
+  }, []);
+
+  const fetchPluginEvents = useCallback(async (mac: string) => {
+    if (!mac) return;
+    try {
+      const params = new URLSearchParams({ mac, limit: "10" });
+      const response = await fetch(`/api/discover/plugins/events?${params.toString()}`, {
+        headers: authHeaders(),
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      setPluginEvents(data.events || []);
+    } catch {
+      setPluginEvents([]);
+    }
+  }, []);
 
   // Fetch custom modes, optionally filtered by device.
   const fetchCustomModes = useCallback(async (mac?: string) => {
@@ -182,12 +270,30 @@ export default function DiscoverPage() {
     fetchModes(selectedCategory);
   }, [selectedCategory, fetchModes]);
 
+  useEffect(() => {
+    fetchDevices();
+  }, [fetchDevices]);
+
+  useEffect(() => {
+    if (installTargetMac) {
+      fetchInstalledModes(installTargetMac);
+      fetchInstalledPlugins(installTargetMac);
+      fetchPluginEvents(installTargetMac);
+    }
+  }, [installTargetMac, fetchInstalledModes, fetchInstalledPlugins, fetchPluginEvents]);
+
   // Load devices when the publish dialog opens.
   useEffect(() => {
     if (isPublishModalOpen) {
       fetchDevices();
     }
   }, [isPublishModalOpen, fetchDevices]);
+
+  useEffect(() => {
+    if (isUploadModalOpen) {
+      fetchDevices();
+    }
+  }, [isUploadModalOpen, fetchDevices]);
 
   // Load custom modes for the selected device.
   useEffect(() => {
@@ -244,6 +350,9 @@ export default function DiscoverPage() {
       setTimeout(() => setShowToast(false), 3000);
       
       console.log("Mode installed:", data.custom_mode_id);
+      if (installTargetMac) {
+        fetchInstalledModes(installTargetMac);
+      }
     } catch (err) {
       console.error("Install failed:", err);
       setToastMessage(err instanceof Error ? err.message : tr("安装失败", "Install failed", "Instalacija nije uspjela"));
@@ -354,6 +463,218 @@ export default function DiscoverPage() {
     }
   };
 
+  const handlePluginFileSelected = async (file: File | null) => {
+    if (!file) return;
+    try {
+      const isZip = file.name.toLowerCase().endsWith(".zip");
+      if (isZip) {
+        const buf = await file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+        }
+        const b64 = btoa(binary);
+        setUploadForm((prev) => ({
+          ...prev,
+          fileName: file.name,
+          fileContent: "",
+          fileBase64: b64,
+        }));
+      } else {
+        const text = await file.text();
+        JSON.parse(text);
+        const b64 = btoa(unescape(encodeURIComponent(text)));
+        setUploadForm((prev) => ({
+          ...prev,
+          fileName: file.name,
+          fileContent: text,
+          fileBase64: b64,
+        }));
+      }
+    } catch {
+      setToastMessage(tr("文件无效，请上传 JSON 或 ZIP 插件包", "Invalid file. Upload a JSON or ZIP plugin package.", "Neispravna datoteka. Učitaj JSON ili ZIP plugin paket."));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
+  const handleInstallLocalPlugin = async () => {
+    if (!uploadForm.mac || !uploadForm.fileBase64) {
+      setToastMessage(tr("请先选择设备和插件文件", "Please choose a device and plugin file first", "Prvo odaberi uređaj i plugin datoteku"));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+
+    setIsUploadingPlugin(true);
+    try {
+      const response = await fetch("/api/discover/plugins/install", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          mac: uploadForm.mac,
+          plugin_base64: uploadForm.fileBase64,
+          plugin_filename: uploadForm.fileName,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || tr("安装失败", "Install failed", "Instalacija nije uspjela"));
+      }
+
+      setIsUploadModalOpen(false);
+      setUploadForm({ mac: "", fileName: "", fileContent: "", fileBase64: "" });
+      const action = String(data?.action || "installed");
+      if (action === "updated") {
+        setToastMessage(tr("插件已更新到新版本", "Plugin updated to a newer version", "Plugin je ažuriran na noviju verziju"));
+      } else if (action === "reinstalled") {
+        setToastMessage(tr("插件已重新安装（同版本）", "Plugin reinstalled (same version)", "Plugin je ponovno instaliran (ista verzija)"));
+      } else {
+        setToastMessage(tr("插件安装成功，已加入你的模式", "Plugin installed and added to your modes", "Plugin je instaliran i dodan u tvoje modove"));
+      }
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      if (uploadForm.mac) {
+        fetchInstalledPlugins(uploadForm.mac);
+        fetchPluginEvents(uploadForm.mac);
+      }
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : tr("安装失败", "Install failed", "Instalacija nije uspjela"));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } finally {
+      setIsUploadingPlugin(false);
+    }
+  };
+
+  const handleDownloadPluginTemplate = () => {
+    const template = {
+      manifest: {
+        plugin_id: "MY_PLUGIN",
+        version: "1.0.0",
+        name: "My Plugin",
+      },
+      mode: {
+        mode_id: "MY_PLUGIN_MODE",
+        display_name: "My Plugin Mode",
+        cacheable: true,
+        content: {
+          type: "static",
+          fallback: {
+            text: "Hello from plugin",
+          },
+        },
+        layout: {
+          body: [
+            {
+              type: "centered_text",
+              field: "text",
+              font: "noto_serif_light",
+              font_size: 20,
+            },
+          ],
+        },
+      },
+    };
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "inksight-plugin-template.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportSelectedModeAsPlugin = async () => {
+    if (!publishForm.mac || !publishForm.source_custom_mode_id) {
+      setToastMessage(tr("请先选择设备和模式", "Please select a device and mode first", "Prvo odaberi uređaj i mod"));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+    try {
+      const params = new URLSearchParams({
+        mac: publishForm.mac,
+        mode_id: publishForm.source_custom_mode_id,
+        version: "1.0.0",
+      });
+      const res = await fetch(`/api/discover/plugins/export?${params.toString()}`, {
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || tr("导出失败", "Export failed", "Izvoz nije uspio"));
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("content-disposition") || "";
+      const filenameMatch = cd.match(/filename=\"?([^"]+)\"?/i);
+      const filename = filenameMatch?.[1] || `${publishForm.source_custom_mode_id.toLowerCase()}-1.0.0.zip`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      setToastMessage(tr("插件包已导出", "Plugin package exported", "Plugin paket je izvezen"));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : tr("导出失败", "Export failed", "Izvoz nije uspio"));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
+  const handleUninstallPlugin = async (pluginId: string) => {
+    if (!installTargetMac || !pluginId || removingPluginId) return;
+    setRemovingPluginId(pluginId);
+    try {
+      const params = new URLSearchParams({ mac: installTargetMac });
+      const res = await fetch(`/api/discover/plugins/${encodeURIComponent(pluginId)}?${params.toString()}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || tr("卸载失败", "Uninstall failed", "Deinstalacija nije uspjela"));
+      }
+      await fetchInstalledPlugins(installTargetMac);
+      await fetchPluginEvents(installTargetMac);
+      setToastMessage(tr("插件已卸载", "Plugin uninstalled", "Plugin je deinstaliran"));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : tr("卸载失败", "Uninstall failed", "Deinstalacija nije uspjela"));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } finally {
+      setRemovingPluginId(null);
+    }
+  };
+
+  const eventLabel = (eventType: string) => {
+    if (eventType === "updated") return tr("已更新", "Updated", "Ažurirano");
+    if (eventType === "reinstalled") return tr("已重装", "Reinstalled", "Ponovno instalirano");
+    if (eventType === "uninstalled") return tr("已卸载", "Uninstalled", "Deinstalirano");
+    return tr("已安装", "Installed", "Instalirano");
+  };
+
+  const pluginSecurityMeta = (plugin: InstalledPlugin) => {
+    const signature = (plugin.manifest?.signature || "").trim();
+    const allowedDomains = plugin.manifest?.permissions_obj?.allowed_domains;
+    const hasDomainAllowlist = Array.isArray(allowedDomains) && allowedDomains.length > 0;
+    return {
+      signed: !!signature,
+      restricted: hasDomainAllowlist,
+      domainCount: hasDomainAllowlist ? allowedDomains.length : 0,
+    };
+  };
+
   // Filter modes client-side by search query.
   const filteredModes = modes.filter((mode) => {
     const matchesSearch =
@@ -367,7 +688,7 @@ export default function DiscoverPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero header */}
-      <section className="border-b border-ink/10 bg-white bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:24px_24px]">
+      <section className="border-b border-ink/10 bg-white bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-size-[24px_24px]">
         <div className="mx-auto max-w-6xl px-6 py-16 md:py-24">
           {/* Title block */}
           <div className="text-center mb-10">
@@ -416,19 +737,124 @@ export default function DiscoverPage() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setIsPublishModalOpen(true)}
-              className="bg-ink text-white rounded-full px-4 py-1.5 text-sm font-medium flex items-center gap-2 hover:bg-ink/90 transition-colors"
-            >
-              <Upload size={16} />
-              {tr("发布模式", "Publish Mode", "Objavi Mod")}
-            </button>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-ink-light">{tr("设备", "Device", "Uređaj")}</label>
+              <select
+                value={installTargetMac}
+                onChange={(e) => setInstallTargetMac(e.target.value)}
+                className="px-2 py-1 text-sm bg-white border border-gray-300 rounded-sm text-ink"
+              >
+                <option value="">{tr("选择设备", "Select device", "Odaberi uređaj")}</option>
+                {devices.map((device) => (
+                  <option key={device.mac} value={device.mac}>
+                    {device.nickname || device.mac}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsPublishModalOpen(true)}
+                className="bg-ink text-white rounded-full px-4 py-1.5 text-sm font-medium flex items-center gap-2 hover:bg-ink/90 transition-colors"
+              >
+                <Upload size={16} />
+                {tr("发布模式", "Publish Mode", "Objavi Mod")}
+              </button>
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="bg-white text-ink rounded-full px-4 py-1.5 text-sm font-medium flex items-center gap-2 border border-gray-300 hover:border-black transition-colors"
+              >
+                <Upload size={16} />
+                {tr("上传插件", "Upload Plugin", "Učitaj Plugin")}
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Mode grid */}
       <section className="mx-auto max-w-6xl px-6 py-12 md:py-16">
+        {installTargetMac && (
+          <div className="mb-8 border border-gray-200 rounded-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-ink">{tr("我的插件", "My Plugins", "Moji Plugini")}</h2>
+              <span className="text-xs text-ink-light">{tr("当前设备", "Current device", "Trenutni uređaj")}: {installTargetMac}</span>
+            </div>
+            {installedPlugins.length > 0 ? (
+              <div className="space-y-2">
+                {installedPlugins.map((plugin) => (
+                  <div key={plugin.plugin_id} className="flex items-center justify-between border border-gray-200 rounded-sm px-3 py-2">
+                    <div>
+                      <div className="text-sm font-medium text-ink">
+                        {plugin.manifest?.name || plugin.plugin_id}
+                      </div>
+                      <div className="text-xs text-ink-light">
+                        {plugin.plugin_id} · v{plugin.version}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        {(() => {
+                          const sec = pluginSecurityMeta(plugin);
+                          return (
+                            <>
+                              <span
+                                className={`px-1.5 py-0.5 rounded-sm text-[10px] border ${
+                                  sec.signed
+                                    ? "border-gray-300 text-ink bg-white"
+                                    : "border-gray-200 text-ink-light bg-gray-50"
+                                }`}
+                              >
+                                {sec.signed
+                                  ? tr("已签名", "Signed", "Potpisano")
+                                  : tr("未签名", "Unsigned", "Bez potpisa")}
+                              </span>
+                              <span
+                                className={`px-1.5 py-0.5 rounded-sm text-[10px] border ${
+                                  sec.restricted
+                                    ? "border-gray-300 text-ink bg-white"
+                                    : "border-gray-200 text-ink-light bg-gray-50"
+                                }`}
+                              >
+                                {sec.restricted
+                                  ? tr(`域名白名单(${sec.domainCount})`, `Domain allowlist (${sec.domainCount})`, `Dozvoljene domene (${sec.domainCount})`)
+                                  : tr("无域名限制", "Open domain", "Otvorene domene")}
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleUninstallPlugin(plugin.plugin_id)}
+                      disabled={removingPluginId === plugin.plugin_id}
+                      className="bg-white text-black border border-black hover:bg-black hover:text-white transition-colors"
+                    >
+                      {removingPluginId === plugin.plugin_id ? tr("处理中...", "Working...", "Obrađujem...") : tr("卸载", "Uninstall", "Deinstaliraj")}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-ink-light border border-dashed border-gray-300 rounded-sm px-3 py-3">
+                {tr("此设备暂时没有已安装插件。", "No plugins installed on this device yet.", "Na ovom uređaju još nema instaliranih plugina.")}
+              </div>
+            )}
+            {pluginEvents.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <div className="text-xs uppercase tracking-wide text-ink-light mb-2">
+                  {tr("最近操作", "Recent Activity", "Nedavne aktivnosti")}
+                </div>
+                <div className="space-y-1">
+                  {pluginEvents.slice(0, 5).map((ev, idx) => (
+                    <div key={`${ev.plugin_id}-${ev.created_at}-${idx}`} className="text-xs text-ink-light">
+                      {eventLabel(ev.event_type)} · {ev.plugin_id} · v{ev.version}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 size={32} className="text-ink-light animate-spin" />
@@ -475,7 +901,7 @@ export default function DiscoverPage() {
                     </div>
 
                     {/* Thumbnail */}
-                    <div className="w-full aspect-[4/3] mb-4 border border-gray-300 bg-white rounded-sm overflow-hidden relative">
+                    <div className="w-full aspect-4/3 mb-4 border border-gray-300 bg-white rounded-sm overflow-hidden relative">
                       {mode.thumbnail_url ? (
                         <Image
                           src={mode.thumbnail_url}
@@ -617,6 +1043,15 @@ export default function DiscoverPage() {
                   ))}
                 </select>
               )}
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={handleExportSelectedModeAsPlugin}
+                  className="text-xs text-ink underline hover:text-ink/70"
+                >
+                  {tr("将所选模式导出为插件 ZIP", "Export selected mode as plugin ZIP", "Izvezi odabrani mod kao plugin ZIP")}
+                </button>
+              </div>
             </div>
 
             {/* Display name */}
@@ -714,6 +1149,79 @@ export default function DiscoverPage() {
                 ) : null}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload plugin dialog */}
+      <Dialog open={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader onClose={() => setIsUploadModalOpen(false)}>
+            <DialogTitle>{tr("上传并安装插件", "Upload and Install Plugin", "Učitaj i Instaliraj Plugin")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                {tr("选择设备", "Select Device", "Odaberi Uređaj")} <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={uploadForm.mac}
+                onChange={(e) => setUploadForm((prev) => ({ ...prev, mac: e.target.value }))}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink focus:outline-none focus:border-black transition-colors"
+              >
+                <option value="">{tr("请选择设备", "Choose a device", "Odaberi uređaj")}</option>
+                {devices.map((device) => (
+                  <option key={device.mac} value={device.mac}>
+                    {device.nickname || device.mac} ({device.mac})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                {tr("插件文件 (.json)", "Plugin File (.json)", "Plugin datoteka (.json)")} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="file"
+                accept="application/json,.json,application/zip,.zip"
+                onChange={(e) => handlePluginFileSelected(e.target.files?.[0] || null)}
+                className="w-full text-sm text-ink"
+              />
+              <p className="text-xs text-ink-light mt-2">
+                {uploadForm.fileName || tr("支持 JSON 或 ZIP 插件包（ZIP 需包含 manifest.json + mode.json）", "Supports JSON or ZIP package (ZIP should include manifest.json + mode.json)", "Podržava JSON ili ZIP paket (ZIP treba sadržavati manifest.json + mode.json)")}
+              </p>
+              <button
+                type="button"
+                onClick={handleDownloadPluginTemplate}
+                className="mt-2 text-xs text-ink underline hover:text-ink/70"
+              >
+                {tr("下载插件模板", "Download plugin template", "Preuzmi plugin predložak")}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-ink/10">
+            <Button
+              variant="outline"
+              onClick={() => setIsUploadModalOpen(false)}
+              disabled={isUploadingPlugin}
+              className="bg-white text-black border border-black hover:bg-black hover:text-white transition-colors"
+            >
+              {tr("取消", "Cancel", "Odustani")}
+            </Button>
+            <Button
+              onClick={handleInstallLocalPlugin}
+              disabled={isUploadingPlugin || !uploadForm.mac || !uploadForm.fileBase64}
+              className="bg-ink text-white hover:bg-ink/90 transition-colors"
+            >
+              {isUploadingPlugin ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  {tr("安装中...", "Installing...", "Instaliram...")}
+                </>
+              ) : (
+                tr("安装插件", "Install Plugin", "Instaliraj Plugin")
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

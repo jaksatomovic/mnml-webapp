@@ -111,7 +111,7 @@ export function RefreshStrategyEditor({
           <select
             value={timezoneValue}
             onChange={(e) => setTimezoneValue(e.target.value)}
-            className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+            className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm appearance-none bg-transparent"
           >
             <option value="">{tr("跟随地点自动填写", "Use location / auto", "Koristi lokaciju / automatski")}</option>
             {TIMEZONE_OPTIONS.map((tz) => (

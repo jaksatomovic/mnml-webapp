@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { proxyGet, proxyDelete } from "../../../_proxy";
+import { proxyGet, proxyDelete } from "@/app/api/_proxy";
 
 export async function GET(
   req: NextRequest,

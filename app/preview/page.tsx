@@ -140,7 +140,7 @@ export default function ExperiencePage() {
   const lastObjectUrlRef = useRef<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
-  const [modal, setModal] = useState<null | { type: "quote" | "weather" | "memo" | "countdown" | "habit" | "lifebar" | "calendar" | "timetable"; modeId: string }>(null);
+  const [modal, setModal] = useState<null | { type: "quote" | "weather" | "memo" | "countdown" | "habit" | "lifebar" | "calendar" | "timetable" | "bf6"; modeId: string }>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_imageUploadLoading, setImageUploadLoading] = useState(false);
   const [quoteDraft, setQuoteDraft] = useState("");
@@ -149,6 +149,8 @@ export default function ExperiencePage() {
     city: pickByLocale(locale, { en: "Zagreb", hr: "Zagreb", zh: "杭州" }),
   });
   const [memoDraft, setMemoDraft] = useState("");
+  const [bf6UsernameDraft, setBf6UsernameDraft] = useState("");
+  const [bf6PlatformDraft, setBf6PlatformDraft] = useState("pc");
   const [calendarReminders, setCalendarReminders] = useState<Record<string, string>>({});
   const [timetableData, setTimetableData] = useState<TimetableData>({
     style: "weekly",
@@ -322,6 +324,10 @@ export default function ExperiencePage() {
         setModal({ type: "timetable", modeId: targetMode });
         return;
       }
+      if (targetMode === "BF6_PROFILE") {
+        setModal({ type: "bf6", modeId: targetMode });
+        return;
+      }
     }
 
     // Clear the previous LLM status when previewing a regular mode.
@@ -477,6 +483,13 @@ export default function ExperiencePage() {
     if (modeId === "TIMETABLE") {
       setPreviewMode(modeId);
       setModal({ type: "timetable", modeId });
+      return;
+    }
+    if (modeId === "BF6_PROFILE") {
+      setPreviewMode(modeId);
+      setBf6UsernameDraft("");
+      setBf6PlatformDraft("pc");
+      setModal({ type: "bf6", modeId });
       return;
     }
 
@@ -812,6 +825,8 @@ export default function ExperiencePage() {
                   ? tr("日历提醒", "Calendar Reminders", "Kalendarski podsjetnici")
                   : modal.type === "timetable"
                   ? tr("课程表设置", "Timetable Settings", "Postavke rasporeda")
+                  : modal.type === "bf6"
+                  ? tr("BF6 档案设置", "BF6 Profile Settings", "BF6 postavke profila")
                   : tr("人生进度条", "Life Progress", "Životni napredak")}
               </div>
               <button className="text-ink-light hover:text-ink" onClick={() => setModal(null)}>
@@ -1228,6 +1243,54 @@ export default function ExperiencePage() {
                       variant="outline"
                     >
                       {tr("预览课程表", "Preview Timetable", "Pregledaj raspored")}
+                    </Button>
+                  </div>
+                </>
+              ) : modal.type === "bf6" ? (
+                <>
+                  <div className="text-xs text-ink-light mb-3">
+                    {tr(
+                      "输入 Battlefield 6 用户名并选择平台。",
+                      "Enter Battlefield 6 username and choose platform.",
+                      "Unesi Battlefield 6 korisničko ime i odaberi platformu.",
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    <input
+                      value={bf6UsernameDraft}
+                      onChange={(e) => setBf6UsernameDraft(e.target.value)}
+                      placeholder={tr("例如：shroud", "e.g. shroud", "npr. shroud")}
+                      className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                      autoFocus
+                    />
+                    <select
+                      value={bf6PlatformDraft}
+                      onChange={(e) => setBf6PlatformDraft(e.target.value)}
+                      className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="pc">PC</option>
+                      <option value="xbox">Xbox (generic)</option>
+                      <option value="xboxseries">Xbox Series</option>
+                      <option value="xboxone">Xbox One</option>
+                      <option value="psn">PlayStation (generic)</option>
+                      <option value="ps5">PlayStation 5</option>
+                      <option value="ps4">PlayStation 4</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-end pt-3">
+                    <Button
+                      onClick={async () => {
+                        const username = bf6UsernameDraft.trim();
+                        setModal(null);
+                        await handlePreview(
+                          modal.modeId,
+                          username ? { bf6_username: username, bf6_platform: bf6PlatformDraft } : {},
+                        );
+                      }}
+                      disabled={previewLoading}
+                      variant="outline"
+                    >
+                      {tr("预览 BF6 档案", "Preview BF6 Profile", "Pregledaj BF6 profil")}
                     </Button>
                   </div>
                 </>

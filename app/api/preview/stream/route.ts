@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { proxyStream } from "../../_proxy";
+import { proxyStream } from "@/app/api/_proxy";
 
 export async function GET(req: NextRequest) {
   const qs = req.nextUrl.search;

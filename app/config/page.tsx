@@ -27,6 +27,9 @@ import {
   Monitor,
   X,
   Users,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { authHeaders, fetchCurrentUser, onAuthChanged } from "@/lib/auth";
 import { localeFromPathname, pickByLocale, withLocalePath } from "@/lib/i18n";
@@ -138,6 +141,7 @@ function normalizeTone(v: unknown): string {
 const TABS = [
   { id: "modes", label: { zh: "模式", en: "Modes", hr: "Modovi" }, icon: Settings },
   { id: "preferences", label: { zh: "个性化", en: "Preferences", hr: "Postavke" }, icon: Sliders },
+  { id: "api_keys", label: { zh: "API Keys", en: "API Keys", hr: "API ključevi" }, icon: KeyRound },
   { id: "sharing", label: { zh: "共享成员", en: "Sharing", hr: "Dijeljenje" }, icon: Users },
   { id: "stats", label: { zh: "状态", en: "Status", hr: "Status" }, icon: BarChart3 },
 ] as const;
@@ -201,7 +205,7 @@ interface PendingPreviewConfirm {
   usageSource?: string;
 }
 
-type ParamModalType = "quote" | "weather" | "memo" | "countdown" | "habit" | "lifebar" | "calendar" | "timetable";
+type ParamModalType = "quote" | "weather" | "memo" | "countdown" | "habit" | "lifebar" | "calendar" | "timetable" | "bf6";
 interface ParamModalState {
   type: ParamModalType;
   mode: string;
@@ -230,6 +234,20 @@ interface DeviceStats {
   last_refresh?: string;
   error_count?: number;
   mode_frequency?: Record<string, number>;
+}
+
+interface UserProfileLlmConfig {
+  llm_access_mode?: "preset" | "custom_openai";
+  provider?: string;
+  model?: string;
+  api_key?: string;
+  base_url?: string;
+}
+
+interface UserProfileResponse {
+  free_quota_remaining?: number;
+  llm_config?: UserProfileLlmConfig | null;
+  llm_config_updated_at?: string;
 }
 
 type RuntimeMode = "active" | "interval" | "unknown";
@@ -529,6 +547,8 @@ function ConfigPageInner() {
   const [quoteDraft, setQuoteDraft] = useState("");
   const [authorDraft, setAuthorDraft] = useState("");
   const [weatherDraftLocation, setWeatherDraftLocation] = useState<LocationValue>({});
+  const [bf6UsernameDraft, setBf6UsernameDraft] = useState("");
+  const [bf6PlatformDraft, setBf6PlatformDraft] = useState("pc");
   const [memoDraft, setMemoDraft] = useState("");
   const [countdownName, setCountdownName] = useState(
     pickByLocale(locale, { zh: "元旦", en: "New Year", hr: "Nova Godina" }),
@@ -595,11 +615,189 @@ function ConfigPageInner() {
   const previewPanelRef = useRef<HTMLDivElement | null>(null);
 
   const [catalogItems, setCatalogItems] = useState<ModeCatalogItem[]>([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [apiKeysSaving, setApiKeysSaving] = useState(false);
+  const [apiKeysRemoving, setApiKeysRemoving] = useState(false);
+  const [freeQuotaRemaining, setFreeQuotaRemaining] = useState<number | null>(null);
+  const [llmAccessModeDraft, setLlmAccessModeDraft] = useState<"preset" | "custom_openai">("preset");
+  const [apiModelDraft, setApiModelDraft] = useState("");
+  const [apiKeyDraft, setApiKeyDraft] = useState("");
+  const [apiBaseUrlDraft, setApiBaseUrlDraft] = useState("https://api.openai.com/v1");
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
+  const [apiKeyTesting, setApiKeyTesting] = useState(false);
+  const [apiKeysUpdatedAt, setApiKeysUpdatedAt] = useState("");
 
   const showToast = useCallback((msg: string, type: "success" | "error" | "info" = "info") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  const loadUserApiKeys = useCallback(async () => {
+    if (!currentUser) return;
+    setApiKeysLoading(true);
+    try {
+      const res = await fetch("/api/user/profile", { headers: authHeaders() });
+      if (!res.ok) throw new Error("profile load failed");
+      const data = (await res.json()) as UserProfileResponse;
+      setFreeQuotaRemaining(typeof data.free_quota_remaining === "number" ? data.free_quota_remaining : null);
+      setApiKeysUpdatedAt(data.llm_config_updated_at || "");
+      const cfg = data.llm_config;
+      if (!cfg) {
+        setLlmAccessModeDraft("preset");
+        setApiModelDraft("deepseek-chat");
+        setApiKeyDraft("");
+        setApiBaseUrlDraft("https://api.openai.com/v1");
+        return;
+      }
+      const mode = (cfg.llm_access_mode || "preset") as "preset" | "custom_openai";
+      setLlmAccessModeDraft(mode);
+      if (mode === "custom_openai") {
+        setApiModelDraft(cfg.model || "gpt-4o-mini");
+        setApiBaseUrlDraft(cfg.base_url || "https://api.openai.com/v1");
+      } else {
+        setApiModelDraft(cfg.model || "deepseek-chat");
+        setApiBaseUrlDraft("https://api.openai.com/v1");
+      }
+      setApiKeyDraft(cfg.api_key || "");
+    } catch {
+      showToast(tr("加载 API Keys 失败", "Failed to load API keys", "Učitavanje API ključeva nije uspjelo"), "error");
+    } finally {
+      setApiKeysLoading(false);
+    }
+  }, [currentUser, showToast, tr]);
+
+  const saveUserApiKeys = useCallback(async () => {
+    if (!currentUser) return;
+    setApiKeysSaving(true);
+    try {
+      const isOpenAiMode = llmAccessModeDraft === "custom_openai";
+      const body = isOpenAiMode
+        ? {
+            llm_access_mode: "custom_openai",
+            provider: "openai_compat",
+            model: apiModelDraft.trim() || "gpt-4o-mini",
+            api_key: apiKeyDraft.trim(),
+            base_url: apiBaseUrlDraft.trim() || "https://api.openai.com/v1",
+            image_provider: "",
+            image_model: "",
+            image_api_key: "",
+            image_base_url: "",
+          }
+        : {
+            llm_access_mode: "preset",
+            provider: "deepseek",
+            model: apiModelDraft.trim() || "deepseek-chat",
+            api_key: apiKeyDraft.trim(),
+            base_url: "",
+            image_provider: "",
+            image_model: "",
+            image_api_key: "",
+            image_base_url: "",
+          };
+
+      const res = await fetch("/api/user/profile/llm", {
+        method: "PUT",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "save failed");
+      showToast(
+        tr("API Keys 已保存，后续将优先使用你的 Key", "API keys saved. Your key will be used first.", "API ključevi su spremljeni. Tvoj ključ će se koristiti prioritetno."),
+        "success",
+      );
+      await loadUserApiKeys();
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : tr("保存 API Keys 失败", "Failed to save API keys", "Spremanje API ključeva nije uspjelo"),
+        "error",
+      );
+    } finally {
+      setApiKeysSaving(false);
+    }
+  }, [currentUser, llmAccessModeDraft, apiModelDraft, apiKeyDraft, apiBaseUrlDraft, showToast, tr, loadUserApiKeys]);
+
+  const removeUserApiKeys = useCallback(async () => {
+    if (!currentUser) return;
+    setApiKeysRemoving(true);
+    try {
+      const res = await fetch("/api/user/profile/llm", {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "delete failed");
+      showToast(
+        tr("已移除 API Keys，系统将使用免费额度", "API keys removed. Free quota will be used.", "API ključevi su uklonjeni. Koristit će se besplatna kvota."),
+        "success",
+      );
+      await loadUserApiKeys();
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : tr("移除 API Keys 失败", "Failed to remove API keys", "Uklanjanje API ključeva nije uspjelo"),
+        "error",
+      );
+    } finally {
+      setApiKeysRemoving(false);
+    }
+  }, [currentUser, showToast, tr, loadUserApiKeys]);
+
+  const testUserApiKeys = useCallback(async () => {
+    if (!currentUser) return;
+    if (!apiKeyDraft.trim()) {
+      showToast(tr("请先输入 API Key", "Please enter API key first", "Prvo unesi API ključ"), "error");
+      return;
+    }
+    setApiKeyTesting(true);
+    try {
+      const isOpenAiMode = llmAccessModeDraft === "custom_openai";
+      const payload = isOpenAiMode
+        ? {
+            llm_access_mode: "custom_openai",
+            provider: "openai_compat",
+            model: apiModelDraft.trim() || "gpt-4o-mini",
+            api_key: apiKeyDraft.trim(),
+            base_url: apiBaseUrlDraft.trim() || "https://api.openai.com/v1",
+          }
+        : {
+            llm_access_mode: "preset",
+            provider: "deepseek",
+            model: apiModelDraft.trim() || "deepseek-chat",
+            api_key: apiKeyDraft.trim(),
+          };
+
+      const res = await fetch("/api/user/profile/llm/test", {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "test failed");
+      showToast(
+        tr("连接测试成功", "Connection test successful", "Test povezivanja je uspješan"),
+        "success",
+      );
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : tr("连接测试失败", "Connection test failed", "Test povezivanja nije uspio"),
+        "error",
+      );
+    } finally {
+      setApiKeyTesting(false);
+    }
+  }, [currentUser, apiKeyDraft, llmAccessModeDraft, apiModelDraft, apiBaseUrlDraft, showToast, tr]);
+
+  useEffect(() => {
+    if (currentUser) {
+      void loadUserApiKeys();
+    }
+  }, [currentUser, loadUserApiKeys]);
 
   const currentLocation = useMemo(
     () => buildLocationValue(city, locationMeta),
@@ -816,7 +1014,7 @@ function ConfigPageInner() {
 
   const requiresParamModal = useCallback((modeId: string) => {
     const m = (modeId || "").toUpperCase();
-    return m === "WEATHER" || m === "MEMO" || m === "MY_QUOTE" || m === "COUNTDOWN" || m === "HABIT" || m === "LIFEBAR" || m === "CALENDAR" || m === "TIMETABLE";
+    return m === "WEATHER" || m === "MEMO" || m === "MY_QUOTE" || m === "COUNTDOWN" || m === "HABIT" || m === "LIFEBAR" || m === "CALENDAR" || m === "TIMETABLE" || m === "BF6_PROFILE";
   }, []);
 
   const openParamModal = useCallback((modeId: string, action: "preview" | "apply") => {
@@ -869,6 +1067,17 @@ function ConfigPageInner() {
         });
       }
       setParamModal({ type: "timetable", mode: m, action });
+      return;
+    }
+    if (m === "BF6_PROFILE") {
+      const existing = (modeOverrides[m] || {}) as Record<string, unknown>;
+      setBf6UsernameDraft(typeof existing.bf6_username === "string" ? existing.bf6_username : "");
+      setBf6PlatformDraft(
+        typeof existing.bf6_platform === "string" && existing.bf6_platform.trim()
+          ? existing.bf6_platform
+          : "pc",
+      );
+      setParamModal({ type: "bf6", mode: m, action });
       return;
     }
   }, [memoText, modeOverrides]);
@@ -1973,7 +2182,7 @@ function ConfigPageInner() {
           </div>
         ) : currentUser === null ? (
           <div className="flex items-start gap-2 p-3 rounded-sm border border-amber-200 bg-amber-50 text-sm text-amber-800">
-            <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <div>
               <p className="font-medium">{tr("请先登录", "Please sign in first", "Najprije se prijavi")}</p>
               <p className="text-xs mt-0.5">{mac ? tr("登录后才能配置设备。", "Sign in to configure this device.", "Prijavi se kako bi konfigurirao ovaj uređaj.") : tr("登录后可以管理你的设备列表。", "Sign in to manage your device list.", "Prijavi se kako bi upravljao svojim uređajima.")}</p>
@@ -1984,7 +2193,7 @@ function ConfigPageInner() {
           </div>
         ) : (macAccessDenied || denyByMembership) ? (
           <div className="flex items-start gap-2 p-3 rounded-sm border border-red-200 bg-red-50 text-sm text-red-800">
-            <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <div>
               <p className="font-medium">{tr("无权访问该设备", "No permission to access this device", "Nemaš pristup ovom uređaju")}</p>
               <p className="text-xs mt-0.5">{tr("该设备未绑定到当前账号，或你不是被授权成员。", "This device is not bound to your account, or you are not an authorized member.", "Ovaj uređaj nije vezan uz tvoj račun ili nisi ovlašteni član.")}</p>
@@ -2138,7 +2347,7 @@ function ConfigPageInner() {
               </div>
             ) : (
               <div className="flex items-start gap-2 p-3 rounded-sm border border-amber-200 bg-amber-50 text-sm text-amber-800">
-                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                <AlertCircle size={16} className="mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium">{tr("未绑定设备", "No bound devices", "Nema povezanih uređaja")}</p>
                   <p className="text-xs mt-0.5">{tr("当前账号下还没有设备。", "There are no devices under this account yet.", "Trenutno nema uređaja povezanih s ovim računom.")}</p>
@@ -2160,7 +2369,7 @@ function ConfigPageInner() {
         <div className="space-y-4">
           <div className="flex gap-6">
             {/* Sidebar tabs */}
-            <nav className="w-44 flex-shrink-0 hidden md:block">
+            <nav className="w-44 shrink-0 hidden md:block">
             <div className="sticky top-24 space-y-1">
               {tabs.map((tab) => (
                 <button
@@ -2410,6 +2619,141 @@ function ConfigPageInner() {
                   {savingPrefs ? <Loader2 size={14} className="animate-spin mr-1" /> : <Save size={14} className="mr-1" />}
                   {tr("保存", "Save", "Spremi")}
                 </Button>
+              </div>
+            )}
+
+            {/* API Keys Tab */}
+            {activeTab === "api_keys" && (
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      {tr("API Keys 与额度", "API Keys & Quota", "API ključevi i kvota")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {apiKeysLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-ink-light">
+                        <Loader2 size={14} className="animate-spin" />
+                        {tr("加载中...", "Loading...", "Učitavanje...")}
+                      </div>
+                    ) : null}
+
+                    <div className="rounded-sm border border-ink/10 bg-paper p-3 text-sm text-ink-light">
+                      {tr(
+                        "提示：保留免费额度机制；一旦你配置自己的 API Key，系统会优先使用你的 Key。",
+                        "Note: free quota remains available; once you configure your own API key, your key is used with priority.",
+                        "Napomena: besplatna kvota ostaje; kad postaviš vlastiti API ključ, koristi se prioritetno tvoj ključ.",
+                      )}
+                      <div className="mt-2 font-medium text-ink">
+                        {tr("当前免费额度", "Current free quota", "Trenutna besplatna kvota")}:{" "}
+                        {freeQuotaRemaining != null ? freeQuotaRemaining : "-"}
+                      </div>
+                      <div className="mt-1 text-xs text-ink-light">
+                        {tr("上次更新", "Last updated", "Zadnje ažuriranje")}:{" "}
+                        {apiKeysUpdatedAt
+                          ? new Date(apiKeysUpdatedAt).toLocaleString(locale === "zh" ? "zh-CN" : locale === "hr" ? "hr-HR" : "en-US")
+                          : "-"}
+                      </div>
+                    </div>
+
+                    <Field label={tr("提供商模式", "Provider Mode", "Način pružatelja")}>
+                      <div className="flex flex-wrap gap-3">
+                        <label className="inline-flex items-center gap-2 text-sm">
+                          <input
+                            type="radio"
+                            name="llm-mode"
+                            checked={llmAccessModeDraft === "preset"}
+                            onChange={() => setLlmAccessModeDraft("preset")}
+                          />
+                          {tr("DeepSeek（平台）", "DeepSeek (Managed)", "DeepSeek (upravljano)")}
+                        </label>
+                        <label className="inline-flex items-center gap-2 text-sm">
+                          <input
+                            type="radio"
+                            name="llm-mode"
+                            checked={llmAccessModeDraft === "custom_openai"}
+                            onChange={() => setLlmAccessModeDraft("custom_openai")}
+                          />
+                          {tr("OpenAI / 兼容", "OpenAI / Compatible", "OpenAI / kompatibilno")}
+                        </label>
+                      </div>
+                    </Field>
+
+                    <Field label={tr("模型名称", "Model Name", "Naziv modela")}>
+                      <input
+                        value={apiModelDraft}
+                        onChange={(e) => setApiModelDraft(e.target.value)}
+                        placeholder={
+                          llmAccessModeDraft === "custom_openai"
+                            ? "gpt-4o-mini"
+                            : "deepseek-chat"
+                        }
+                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                      />
+                    </Field>
+
+                    {llmAccessModeDraft === "custom_openai" && (
+                      <Field label={tr("Base URL", "Base URL", "Base URL")}>
+                        <input
+                          value={apiBaseUrlDraft}
+                          onChange={(e) => setApiBaseUrlDraft(e.target.value)}
+                          placeholder="https://api.openai.com/v1"
+                          className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        />
+                      </Field>
+                    )}
+
+                    <Field label={tr("API Key", "API Key", "API ključ")}>
+                      <div className="relative">
+                        <input
+                          type={apiKeyVisible ? "text" : "password"}
+                          value={apiKeyDraft}
+                          onChange={(e) => setApiKeyDraft(e.target.value)}
+                          placeholder={tr("输入你的 API Key", "Enter your API key", "Unesi svoj API ključ")}
+                          className="w-full rounded-sm border border-ink/20 px-3 py-2 pr-10 text-sm bg-white font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setApiKeyVisible((v) => !v)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-light hover:text-ink"
+                          aria-label={apiKeyVisible ? "Hide API key" : "Show API key"}
+                        >
+                          {apiKeyVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </Field>
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={testUserApiKeys}
+                        disabled={apiKeyTesting || apiKeysSaving || apiKeysRemoving}
+                        className="bg-white text-ink border-ink/20 hover:bg-ink hover:text-white"
+                      >
+                        {apiKeyTesting ? <Loader2 size={14} className="animate-spin mr-1" /> : <RefreshCw size={14} className="mr-1" />}
+                        {tr("测试连接", "Test Connection", "Testiraj vezu")}
+                      </Button>
+                      <Button
+                        onClick={saveUserApiKeys}
+                        disabled={apiKeysSaving || apiKeysRemoving}
+                        className="bg-ink text-white hover:bg-ink/90"
+                      >
+                        {apiKeysSaving ? <Loader2 size={14} className="animate-spin mr-1" /> : <Save size={14} className="mr-1" />}
+                        {tr("保存 API Keys", "Save API Keys", "Spremi API ključeve")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={removeUserApiKeys}
+                        disabled={apiKeysSaving || apiKeysRemoving}
+                        className="bg-white text-ink border-ink/20 hover:bg-ink hover:text-white"
+                      >
+                        {apiKeysRemoving ? <Loader2 size={14} className="animate-spin mr-1" /> : <Trash2 size={14} className="mr-1" />}
+                        {tr("移除并回退免费额度", "Remove and fallback to free quota", "Ukloni i vrati na besplatnu kvotu")}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
@@ -3081,6 +3425,8 @@ function ConfigPageInner() {
                   ? tr("日历提醒", "Calendar Reminders", "Kalendarski podsjetnici")
                   : paramModal.type === "timetable"
                   ? tr("课程表设置", "Timetable Settings", "Postavke rasporeda")
+                  : paramModal.type === "bf6"
+                  ? tr("BF6 档案设置", "BF6 Profile Settings", "BF6 postavke profila")
                   : tr("人生进度条", "Life Progress", "Životni napredak")}
               </div>
               <button className="text-ink-light hover:text-ink" onClick={() => setParamModal(null)}>
@@ -3481,6 +3827,75 @@ function ConfigPageInner() {
                       variant="outline"
                     >
                       {tr("预览课程表", "Preview Timetable", "Pregledaj raspored")}
+                    </Button>
+                  </div>
+                </>
+              ) : paramModal.type === "bf6" ? (
+                <>
+                  <div className="text-xs text-ink-light">
+                    {tr(
+                      "输入 Battlefield 6 用户名并选择平台，用于抓取档案统计。",
+                      "Enter Battlefield 6 username and choose platform to fetch profile stats.",
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-ink mb-1.5">
+                        {tr("BF6 用户名", "BF6 Username", "BF6 korisničko ime")}
+                      </label>
+                      <input
+                        value={bf6UsernameDraft}
+                        onChange={(e) => setBf6UsernameDraft(e.target.value)}
+                        placeholder={tr("例如：shroud", "e.g. shroud", "npr. shroud")}
+                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-ink mb-1.5">
+                        {tr("平台", "Platform", "Platforma")}
+                      </label>
+                      <select
+                        value={bf6PlatformDraft}
+                        onChange={(e) => setBf6PlatformDraft(e.target.value)}
+                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                      >
+                        <option value="pc">PC</option>
+                        <option value="xbox">Xbox (generic)</option>
+                        <option value="xboxseries">Xbox Series</option>
+                        <option value="xboxone">Xbox One</option>
+                        <option value="psn">PlayStation (generic)</option>
+                        <option value="ps5">PlayStation 5</option>
+                        <option value="ps4">PlayStation 4</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setBf6UsernameDraft("");
+                        setBf6PlatformDraft("pc");
+                      }}
+                      disabled={previewLoading}
+                    >
+                      {tr("清空", "Clear", "Očisti")}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        const username = bf6UsernameDraft.trim();
+                        commitModalAction(
+                          paramModal.mode,
+                          paramModal.action,
+                          username
+                            ? ({ bf6_username: username, bf6_platform: bf6PlatformDraft } as ModeOverride)
+                            : undefined,
+                        );
+                      }}
+                      disabled={previewLoading}
+                      variant="outline"
+                    >
+                      {tr("预览 BF6 档案", "Preview BF6 Profile", "Pregledaj BF6 profil")}
                     </Button>
                   </div>
                 </>

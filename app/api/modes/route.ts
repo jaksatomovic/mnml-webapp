@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { proxyGet, proxyPost } from "../_proxy";
+import { proxyGet, proxyPost } from "@/app/api/_proxy";
 
 export async function GET(req: NextRequest) {
   // Preserve query params passed by the webapp, for example ?mac=...
