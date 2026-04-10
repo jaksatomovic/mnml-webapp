@@ -1,9 +1,6 @@
 /**
- * Device chrome geometry: must match `backend/core/config.py` and
- * `firmware/src/config.h` (INKSIGHT_*).
- *
- * The BMP/PNG from /api/render and /api/preview is the *body* only (between
- * firmware-drawn status and footer strips).
+ * Preview uses full panel size (w×h). Status bar and footer are rendered in the
+ * bitmap by the backend; the device only displays the image.
  */
 export const INKSIGHT_STATUS_BAR_PX = 36;
 export const INKSIGHT_FOOTER_PX = 30;
@@ -11,7 +8,7 @@ export const INKSIGHT_FOOTER_PX = 30;
 export const DEFAULT_PANEL_W = 400;
 export const DEFAULT_PANEL_H = 300;
 
+/** Effective render dimensions for /api/preview (full frame). */
 export function inksightBodySize(panelW: number, panelH: number): { w: number; h: number } {
-  const h = panelH - INKSIGHT_STATUS_BAR_PX - INKSIGHT_FOOTER_PX;
-  return { w: panelW, h: Math.max(1, h) };
+  return { w: panelW, h: Math.max(1, panelH) };
 }
