@@ -1,15 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { localeFromPathname, pickByLocale } from "@/lib/i18n";
 
 function WidgetContent() {
+  const pathname = usePathname();
+  const locale = localeFromPathname(pathname || "/");
   const searchParams = useSearchParams();
   const mac = searchParams.get("mac") || "";
   const mode = searchParams.get("mode") || "";
   const size = searchParams.get("size") || "medium";
-  const error = mac ? "" : "Missing mac parameter";
+  const error = mac ? "" : pickByLocale(locale, { zh: "缺少 mac 参数", en: "Missing mac parameter", hr: "Nedostaje mac parametar" });
   const imgSrc = (() => {
     if (!mac) return "";
     const apiBase = process.env.NEXT_PUBLIC_API_BASE || "";
@@ -52,7 +55,7 @@ function WidgetContent() {
       {imgSrc ? (
         <Image
           src={imgSrc}
-          alt="InkSight Widget"
+          alt={pickByLocale(locale, { zh: "InkSight 小组件", en: "InkSight Widget", hr: "InkSight widget" })}
           width={800}
           height={480}
           unoptimized
@@ -66,7 +69,7 @@ function WidgetContent() {
         />
       ) : (
         <div style={{ color: "#888", fontFamily: "sans-serif" }}>
-          Loading...
+          {pickByLocale(locale, { zh: "加载中...", en: "Loading...", hr: "Učitavanje..." })}
         </div>
       )}
     </div>
@@ -74,6 +77,8 @@ function WidgetContent() {
 }
 
 export default function WidgetPage() {
+  const pathname = usePathname();
+  const locale = localeFromPathname(pathname || "/");
   return (
     <Suspense
       fallback={
@@ -86,7 +91,7 @@ export default function WidgetPage() {
             color: "#888",
           }}
         >
-          Loading...
+          {pickByLocale(locale, { zh: "加载中...", en: "Loading...", hr: "Učitavanje..." })}
         </div>
       }
     >

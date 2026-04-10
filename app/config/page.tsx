@@ -76,6 +76,7 @@ type ModeCatalogItem = {
   i18n?: {
     zh?: { name?: string; tip?: string };
     en?: { name?: string; tip?: string };
+    hr?: { name?: string; tip?: string };
   };
 };
 
@@ -3504,8 +3505,17 @@ function ConfigPageInner() {
 }
 
 export default function ConfigPage() {
+  const pathname = usePathname();
+  const locale = localeFromPathname(pathname || "/");
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-ink-light"><Loader2 size={24} className="animate-spin mr-2" /> Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen text-ink-light">
+          <Loader2 size={24} className="animate-spin mr-2" />
+          {pickByLocale(locale, { zh: "加载中...", en: "Loading...", hr: "Učitavanje..." })}
+        </div>
+      }
+    >
       <ConfigPageInner />
     </Suspense>
   );

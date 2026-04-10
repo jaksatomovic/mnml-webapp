@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Eye, Loader2, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { localeFromPathname, pickByLocale, t, withLocalePath } from "@/lib/i18n";
+import { localeFromPathname, pickByLocale, t, withLocalePath, type Locale } from "@/lib/i18n";
 import { cleanLocationValue, type LocationValue } from "@/lib/locations";
 import { authHeaders, fetchCurrentUser } from "@/lib/auth";
 import { ColorSelect } from "@/components/ui/color-select";
@@ -24,6 +24,7 @@ type ModeCatalogItem = {
   i18n?: {
     zh?: { name?: string; tip?: string };
     en?: { name?: string; tip?: string };
+    hr?: { name?: string; tip?: string };
   };
 };
 
@@ -44,7 +45,7 @@ function ModeSection({
   collapsible?: boolean;
   customMeta?: Record<string, { name: string; tip: string }>;
   tailItem?: React.ReactNode;
-  locale: string;
+  locale: Locale;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   if (!modes.length) return null;
