@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, Suspense, useMemo, useRef, type CSSProperties } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { DeviceInfo } from "@/components/config/device-info";
 import { LocationPicker } from "@/components/config/location-picker";
 import { ModeSelector } from "@/components/config/mode-selector";
 import { EInkPreviewPanel } from "@/components/config/eink-preview-panel";
+import {
+  DEFAULT_PANEL_H,
+  DEFAULT_PANEL_W,
+  inksightBodySize,
+} from "@/lib/inksight-chrome";
 import { CalendarReminders } from "@/components/config/calendar-reminders";
 import { TimetableEditor, type TimetableData } from "@/components/config/timetable-editor";
 import { RefreshStrategyEditor } from "@/components/config/refresh-strategy-editor";
@@ -140,11 +145,144 @@ function normalizeTone(v: unknown): string {
 
 const TABS = [
   { id: "modes", label: { zh: "模式", en: "Modes", hr: "Modovi" }, icon: Settings },
+  { id: "surfaces", label: { zh: "Surfaces", en: "Surfaces", hr: "Surfaces" }, icon: RefreshCw },
   { id: "preferences", label: { zh: "个性化", en: "Preferences", hr: "Postavke" }, icon: Sliders },
   { id: "api_keys", label: { zh: "API Keys", en: "API Keys", hr: "API ključevi" }, icon: KeyRound },
   { id: "sharing", label: { zh: "共享成员", en: "Sharing", hr: "Dijeljenje" }, icon: Users },
   { id: "stats", label: { zh: "状态", en: "Status", hr: "Status" }, icon: BarChart3 },
 ] as const;
+
+const DEFAULT_SURFACE_LIBRARY = [
+  {
+    id: "morning",
+    name: { zh: "晨间", en: "Morning", hr: "Jutro" },
+    tip: { zh: "天气 + 日历摘要", en: "Weather + calendar summary", hr: "Vrijeme + kalendar" },
+    definition: {
+      id: "morning",
+      type: "surface",
+      layout: [
+        { mode: "WEATHER", position: "top" },
+        { mode: "CALENDAR", position: "middle" },
+        { mode: "DAILY", position: "bottom" },
+      ],
+      refresh: { mode: "hybrid", interval: 300 },
+      rules: [],
+    },
+  },
+  {
+    id: "work",
+    name: { zh: "工作", en: "Work", hr: "Posao" },
+    tip: { zh: "日历 + 任务", en: "Calendar + tasks", hr: "Kalendar + zadaci" },
+    definition: {
+      id: "work",
+      type: "surface",
+      layout: [
+        { mode: "CALENDAR", position: "top" },
+        { mode: "BRIEFING", position: "middle" },
+        { mode: "STOIC", position: "bottom" },
+      ],
+      refresh: { mode: "hybrid", interval: 300 },
+      rules: [],
+    },
+  },
+  {
+    id: "home",
+    name: { zh: "居家", en: "Home", hr: "Dom" },
+    tip: { zh: "轻量资讯面板", en: "Lightweight info board", hr: "Lagan info panel" },
+    definition: {
+      id: "home",
+      type: "surface",
+      layout: [
+        { mode: "WEATHER", position: "top" },
+        { mode: "DAILY", position: "middle" },
+        { mode: "CALENDAR", position: "bottom" },
+      ],
+      refresh: { mode: "polling", interval: 600 },
+      rules: [],
+    },
+  },
+] as const;
+
+function legacyTypeToMode(t: string): string {
+  const x = (t || "").toLowerCase();
+  const map: Record<string, string> = {
+    weather: "WEATHER",
+    calendar: "CALENDAR",
+    text: "DAILY",
+    tasks: "BRIEFING",
+    github: "BRIEFING",
+    custom_api: "DAILY",
+  };
+  return map[x] || "STOIC";
+}
+
+function resolveSurfaceSlotMode(item: Record<string, unknown> | null | undefined): string {
+  if (!item || typeof item !== "object") return "STOIC";
+  const m = item.mode ?? item.mode_id ?? item.persona;
+  if (typeof m === "string" && m.trim()) return m.trim().toUpperCase();
+  return legacyTypeToMode(String(item.type ?? "text"));
+}
+
+const SURFACE_PREVIEW_W = 400;
+const SURFACE_PREVIEW_H = 300;
+
+/** CSS mosaic for the layout editor — mirrors backend presets for morning / work / home. */
+function surfaceMosaicGridStyle(surfaceId: string): CSSProperties {
+  const base: CSSProperties = {
+    display: "grid",
+    gap: "8px",
+    aspectRatio: "4 / 3",
+    width: "100%",
+    minHeight: "260px",
+    maxHeight: "min(52vh, 420px)",
+  };
+  switch (surfaceId) {
+    case "morning":
+      return {
+        ...base,
+        gridTemplateColumns: "1fr 1fr",
+        gridTemplateRows: "1fr 1fr",
+        gridTemplateAreas: `"top middle" "bottom bottom"`,
+      };
+    case "work":
+      return {
+        ...base,
+        gridTemplateColumns: "1.2fr 0.85fr",
+        gridTemplateRows: "1fr 1.1fr",
+        gridTemplateAreas: `"a b" "c c"`,
+      };
+    case "home":
+      return {
+        ...base,
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gridTemplateRows: "1fr 1fr auto",
+        gridTemplateAreas: `"w t t" "w t t" "bot bot bot"`,
+      };
+    default:
+      return {
+        ...base,
+        gridTemplateColumns: "1fr",
+        gridTemplateRows: "repeat(3, minmax(52px, 1fr))",
+      };
+  }
+}
+
+function surfaceSlotGridArea(surfaceId: string, slot: "top" | "middle" | "bottom"): string | undefined {
+  if (surfaceId === "work") {
+    if (slot === "top") return "a";
+    if (slot === "middle") return "b";
+    return "c";
+  }
+  if (surfaceId === "home") {
+    if (slot === "top") return "w";
+    if (slot === "middle") return "t";
+    return "bot";
+  }
+  if (surfaceId === "morning") {
+    return slot;
+  }
+  return undefined;
+}
 
 type TabId = (typeof TABS)[number]["id"];
 
@@ -180,6 +318,14 @@ interface DeviceConfig {
   memo_text?: string;
   mode_overrides?: Record<string, ModeOverride>;
   modeOverrides?: Record<string, ModeOverride>;
+  deviceMode?: "mode" | "surface";
+  device_mode?: "mode" | "surface";
+  assignedMode?: string;
+  assigned_mode?: string;
+  assignedSurface?: string;
+  assigned_surface?: string;
+  surfaces?: Array<Record<string, unknown>>;
+  surfaceSchedule?: Array<Record<string, unknown>>;
   is_focus_listening?: boolean;
   focus_listening?: number;
   is_always_active?: boolean;
@@ -509,8 +655,25 @@ function ConfigPageInner() {
   const [activeTab, setActiveTab] = useState<TabId>("modes");
   const [config, setConfig] = useState<DeviceConfig>({});
   const [selectedModes, setSelectedModes] = useState<Set<string>>(new Set(["STOIC", "ZEN", "DAILY"]));
+  const [selectedSurfaces, setSelectedSurfaces] = useState<Set<string>>(new Set(["work"]));
   const [strategy, setStrategy] = useState("random");
   const [refreshMin, setRefreshMin] = useState(60);
+  const [deviceRenderMode, setDeviceRenderMode] = useState<"mode" | "surface">("mode");
+  const [assignedLegacyMode, setAssignedLegacyMode] = useState("");
+  const [assignedSurface, setAssignedSurface] = useState("");
+  const [surfacePreviewTarget, setSurfacePreviewTarget] = useState("");
+  /** Surface whose 3-slot layout editor is open (user clicked the surface card). */
+  const [surfaceLayoutEditorId, setSurfaceLayoutEditorId] = useState("");
+  const [surfaceSlotModal, setSurfaceSlotModal] = useState<null | { surfaceId: string; position: "top" | "middle" | "bottom" }>(
+    null,
+  );
+  const [surfaceSlotModalMode, setSurfaceSlotModalMode] = useState<string>("STOIC");
+  const [surfaceSlotModalMemo, setSurfaceSlotModalMemo] = useState("");
+  const [surfaceDrafts, setSurfaceDrafts] = useState<Record<string, Record<string, unknown>>>({});
+  const [surfacePreviewImg, setSurfacePreviewImg] = useState<string | null>(null);
+  const [surfacePreviewLoading, setSurfacePreviewLoading] = useState(false);
+  const [surfacePreviewStatusText, setSurfacePreviewStatusText] = useState("");
+  const [surfaceApplyToScreenLoading, setSurfaceApplyToScreenLoading] = useState(false);
   const [city, setCity] = useState("");
   const [locationMeta, setLocationMeta] = useState<LocationValue>({});
   const [modeLanguage, setModeLanguage] = useState("zh");
@@ -594,6 +757,7 @@ function ConfigPageInner() {
   const memoSettingsInputRef = useRef<HTMLTextAreaElement | null>(null);
   const previewStreamRef = useRef<EventSource | null>(null);
   const previewObjectUrlRef = useRef<string | null>(null);
+  const surfacePreviewObjectUrlRef = useRef<string | null>(null);
   const [runtimeMode, setRuntimeMode] = useState<RuntimeMode>("unknown");
   const [isOnline, setIsOnline] = useState(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
@@ -613,6 +777,7 @@ function ConfigPageInner() {
   const [customEditorSource, setCustomEditorSource] = useState<"ai" | "manual" | null>(null);
   const [previewModeLabelOverride, setPreviewModeLabelOverride] = useState<string | null>(null);
   const previewPanelRef = useRef<HTMLDivElement | null>(null);
+  const surfacePanelRef = useRef<HTMLDivElement | null>(null);
 
   const [catalogItems, setCatalogItems] = useState<ModeCatalogItem[]>([]);
   const [apiKeysLoading, setApiKeysLoading] = useState(false);
@@ -827,6 +992,15 @@ function ConfigPageInner() {
     setPreviewImg(nextUrl);
   }, []);
 
+  const replaceSurfacePreviewImg = useCallback((nextUrl: string | null) => {
+    if (surfacePreviewObjectUrlRef.current) {
+      URL.revokeObjectURL(surfacePreviewObjectUrlRef.current);
+      surfacePreviewObjectUrlRef.current = null;
+    }
+    if (nextUrl) surfacePreviewObjectUrlRef.current = nextUrl;
+    setSurfacePreviewImg(nextUrl);
+  }, []);
+
   const uploadLocalImage = useCallback(async (file: File): Promise<string> => {
     const fd = new FormData();
     fd.append("file", file);
@@ -845,6 +1019,10 @@ function ConfigPageInner() {
       if (previewObjectUrlRef.current) {
         URL.revokeObjectURL(previewObjectUrlRef.current);
         previewObjectUrlRef.current = null;
+      }
+      if (surfacePreviewObjectUrlRef.current) {
+        URL.revokeObjectURL(surfacePreviewObjectUrlRef.current);
+        surfacePreviewObjectUrlRef.current = null;
       }
     };
   }, []);
@@ -932,8 +1110,28 @@ function ConfigPageInner() {
       .then((cfg: DeviceConfig) => {
         setConfig(cfg);
         if (cfg.modes?.length) setSelectedModes(new Set(cfg.modes.map((m) => m.toUpperCase())));
+        if (Array.isArray(cfg.surfaces) && cfg.surfaces.length) {
+          const ids = cfg.surfaces
+            .map((s) => (s && typeof s === "object" ? String((s as Record<string, unknown>).id || "").trim() : ""))
+            .filter(Boolean);
+          if (ids.length) setSelectedSurfaces(new Set(ids));
+          const drafts: Record<string, Record<string, unknown>> = {};
+          for (const s of cfg.surfaces) {
+            if (!s || typeof s !== "object") continue;
+            const rec = s as Record<string, unknown>;
+            const id = String(rec.id || "").trim();
+            if (!id) continue;
+            drafts[id] = { ...rec, id, type: "surface" };
+          }
+          setSurfaceDrafts(drafts);
+        }
         if (cfg.refreshStrategy || cfg.refresh_strategy) setStrategy((cfg.refreshStrategy || cfg.refresh_strategy) as string);
         if (cfg.refreshInterval || cfg.refresh_minutes) setRefreshMin((cfg.refreshInterval || cfg.refresh_minutes) as number);
+        const loadedDeviceMode = ((cfg.deviceMode || cfg.device_mode || "mode") as string).toLowerCase();
+        setDeviceRenderMode(loadedDeviceMode === "surface" ? "surface" : "mode");
+        setAssignedLegacyMode(String(cfg.assignedMode || cfg.assigned_mode || ""));
+        setAssignedSurface(String(cfg.assignedSurface || cfg.assigned_surface || ""));
+        setSurfacePreviewTarget(String(cfg.assignedSurface || cfg.assigned_surface || ""));
         applyGlobalLocation(extractLocationValue(cfg as Record<string, unknown>));
         setModeLanguage((cfg as Record<string, unknown>).modeLanguage as string || (cfg as Record<string, unknown>).mode_language as string || "zh");
         if (cfg.contentTone || cfg.content_tone) setContentTone(normalizeTone(cfg.contentTone || cfg.content_tone));
@@ -1152,6 +1350,10 @@ function ConfigPageInner() {
           })
           .filter(([, ov]) => Object.keys(ov).length > 0)
       );
+      const normalizedSurfaces = surfaceCatalog
+        .filter((surface) => selectedSurfaces.has(surface.id))
+        .map((surface) => ({ ...surface.definition, id: surface.id, type: "surface" }));
+      const resolvedAssignedSurface = assignedSurface || normalizedSurfaces[0]?.id || "";
       const body: Record<string, unknown> = {
         mac,
         modes: Array.from(selectedModes),
@@ -1163,6 +1365,11 @@ function ConfigPageInner() {
         characterTones: characterTones,
         modeOverrides: normalizedModeOverrides,
         memoText: memoText,
+        deviceMode: deviceRenderMode,
+        assignedMode: assignedLegacyMode || (Array.from(selectedModes)[0] || "STOIC"),
+        assignedSurface: resolvedAssignedSurface,
+        surfaces: normalizedSurfaces,
+        surfaceSchedule: [],
         is_focus_listening: isFocusListening,
         always_active: alwaysActive,
       };
@@ -1215,6 +1422,10 @@ function ConfigPageInner() {
           })
           .filter(([, ov]) => Object.keys(ov).length > 0)
       );
+      const normalizedSurfaces = surfaceCatalog
+        .filter((surface) => selectedSurfaces.has(surface.id))
+        .map((surface) => ({ ...surface.definition, id: surface.id, type: "surface" }));
+      const resolvedAssignedSurface = assignedSurface || normalizedSurfaces[0]?.id || "";
       const body: Record<string, unknown> = {
         mac,
         modes: Array.from(selectedModes),
@@ -1226,6 +1437,11 @@ function ConfigPageInner() {
         characterTones: characterTones,
         modeOverrides: normalizedModeOverrides,
         memoText: memoText,
+        deviceMode: deviceRenderMode,
+        assignedMode: assignedLegacyMode || (Array.from(selectedModes)[0] || "STOIC"),
+        assignedSurface: resolvedAssignedSurface,
+        surfaces: normalizedSurfaces,
+        surfaceSchedule: [],
         is_focus_listening: isFocusListening,
         always_active: alwaysActive,
       };
@@ -1288,6 +1504,9 @@ function ConfigPageInner() {
       params.set("mode_override", JSON.stringify({ countdownEvents: [] }));
       if (previewColors > 2) params.set("colors", String(previewColors));
       if (forceFresh) params.set("no_cache", "1");
+      const bodyCd = inksightBodySize(DEFAULT_PANEL_W, DEFAULT_PANEL_H);
+      params.set("w", String(bodyCd.w));
+      params.set("h", String(bodyCd.h));
       return { m, params, consumeNoCacheOnce };
     }
     const modeOverrideSource = sanitizeModeOverride(
@@ -1340,6 +1559,9 @@ function ConfigPageInner() {
     if (locationChanged && effectiveLocation.city) params.set("city_override", effectiveLocation.city);
     if (previewColors > 2) params.set("colors", String(previewColors));
     if (forceFresh || locationChanged || hasModeOverride) params.set("no_cache", "1");
+    const body = inksightBodySize(DEFAULT_PANEL_W, DEFAULT_PANEL_H);
+    params.set("w", String(body.w));
+    params.set("h", String(body.h));
     return { m, params, consumeNoCacheOnce };
   }, [config, currentLocation, mac, memoText, modeOverrides, previewColors, previewMode, previewNoCacheOnce, sanitizeModeOverride]);
 
@@ -1898,6 +2120,9 @@ function ConfigPageInner() {
     }
     const wasSelected = selectedModes.has(modeId);
     toggleMode(modeId);
+    if (!wasSelected && !assignedLegacyMode) {
+      setAssignedLegacyMode(modeId);
+    }
     showToast(
       wasSelected
         ? tr("已从轮播移除", "Removed from rotation")
@@ -1905,6 +2130,73 @@ function ConfigPageInner() {
       "success",
     );
   };
+
+  const toggleSurface = useCallback((surfaceId: string) => {
+    setSelectedSurfaces((prev) => {
+      const next = new Set(prev);
+      if (next.has(surfaceId)) next.delete(surfaceId);
+      else next.add(surfaceId);
+      return next;
+    });
+  }, []);
+
+  const handleSurfaceApply = useCallback(
+    (surfaceId: string) => {
+      const wasSelected = selectedSurfaces.has(surfaceId);
+      toggleSurface(surfaceId);
+      if (!wasSelected && !assignedSurface) {
+        setAssignedSurface(surfaceId);
+      }
+      if (wasSelected) {
+        if (surfaceLayoutEditorId === surfaceId) {
+          setSurfaceLayoutEditorId("");
+          replaceSurfacePreviewImg(null);
+        }
+      }
+      showToast(
+        wasSelected
+          ? tr("已从 Surface 列表移除", "Removed from surfaces")
+          : tr("已加入 Surface 列表", "Added to surfaces"),
+        "success",
+      );
+    },
+    [assignedSurface, replaceSurfacePreviewImg, selectedSurfaces, showToast, surfaceLayoutEditorId, toggleSurface, tr],
+  );
+
+  const updateSurfaceSlotMode = useCallback(
+    (surfaceId: string, position: "top" | "middle" | "bottom", modeId: string, memoText?: string) => {
+      const mid = (modeId || "STOIC").toUpperCase();
+      setSurfaceDrafts((prev) => {
+        const current = (prev[surfaceId] || {
+          id: surfaceId,
+          type: "surface",
+          refresh: { mode: "hybrid", interval: 300 },
+          rules: [],
+        }) as Record<string, unknown>;
+        const existingLayout = Array.isArray(current.layout) ? (current.layout as Array<Record<string, unknown>>) : [];
+        const filtered = existingLayout.filter((item) => String(item.position || "") !== position);
+        const block: Record<string, unknown> = { mode: mid, position };
+        if (mid === "MEMO") {
+          const t = (memoText ?? "").trim();
+          if (t) block.memo_text = t;
+        }
+        const nextLayout = [...filtered, block].sort((a, b) => {
+          const order = { top: 0, middle: 1, bottom: 2 } as const;
+          return (order[String(a.position || "middle") as keyof typeof order] ?? 1) - (order[String(b.position || "middle") as keyof typeof order] ?? 1);
+        });
+        return {
+          ...prev,
+          [surfaceId]: {
+            ...current,
+            id: surfaceId,
+            type: "surface",
+            layout: nextLayout,
+          },
+        };
+      });
+    },
+    [],
+  );
 
   const handleCustomModeDelete = async (m: string) => {
     const modeId = (m || "").toUpperCase();
@@ -2046,6 +2338,47 @@ function ConfigPageInner() {
     }
   };
 
+  const handleApplySurfaceToScreen = async () => {
+    if (!mac || !surfacePreviewImg || !assignedSurface) return;
+    setSurfaceApplyToScreenLoading(true);
+    try {
+      const stateRes = await fetch(`/api/device/${encodeURIComponent(mac)}/state`, { cache: "no-store", headers: authHeaders() });
+      if (!stateRes.ok) {
+        showToast(tr("无法确认设备状态，已阻止发送", "Unable to verify device status. Sending was blocked"), "error");
+        return;
+      }
+      const stateData = await stateRes.json();
+      const mode = stateData?.runtime_mode;
+      if (mode === "active" || mode === "interval") {
+        setRuntimeMode(mode);
+      }
+      if (mode !== "active") {
+        showToast(tr("设备处于间歇状态，不可发送", "Device is in interval mode and cannot receive content"), "error");
+        return;
+      }
+
+      const previewResponse = await fetch(surfacePreviewImg);
+      if (!previewResponse.ok) throw new Error("preview image unavailable");
+      const previewBlob = await previewResponse.blob();
+
+      const qs = new URLSearchParams();
+      qs.set("mode", `SURFACE_${assignedSurface}`);
+      const res = await fetch(`/api/device/${encodeURIComponent(mac)}/apply-preview?${qs.toString()}`, {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "image/png" }),
+        body: previewBlob,
+      });
+      if (!res.ok) throw new Error("apply-preview failed");
+      setCurrentMode(`SURFACE_${assignedSurface}`);
+      await loadRuntimeMode();
+      showToast(tr("已下发到墨水屏", "Sent to E-Ink"), "success");
+    } catch {
+      showToast(tr("下发失败", "Send failed"), "error");
+    } finally {
+      setSurfaceApplyToScreenLoading(false);
+    }
+  };
+
   const handleAddCustomPersona = () => {
     const v = customPersonaTone.trim();
     if (!v) return;
@@ -2096,6 +2429,145 @@ function ConfigPageInner() {
       ),
     [catalogItems, locale],
   );
+  const surfaceCatalog = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; tip: string; definition: Record<string, unknown> }>();
+    for (const item of DEFAULT_SURFACE_LIBRARY) {
+      map.set(item.id, {
+        id: item.id,
+        name: pickByLocale(locale, item.name),
+        tip: pickByLocale(locale, item.tip),
+        definition: { ...item.definition },
+      });
+    }
+    const configured = Array.isArray(config.surfaces) ? config.surfaces : [];
+    for (const raw of configured) {
+      if (!raw || typeof raw !== "object") continue;
+      const id = String((raw as Record<string, unknown>).id || "").trim();
+      if (!id) continue;
+      const existing = map.get(id);
+      map.set(id, {
+        id,
+        name: existing?.name || id,
+        tip: existing?.tip || tr("设备配置里的 Surface", "Surface from device config", "Surface iz konfiguracije uređaja"),
+        definition: { ...(raw as Record<string, unknown>), id, type: "surface" },
+      });
+    }
+    for (const [id, draft] of Object.entries(surfaceDrafts)) {
+      if (!id) continue;
+      const existing = map.get(id);
+      map.set(id, {
+        id,
+        name: existing?.name || id,
+        tip: existing?.tip || tr("自定义 Surface", "Custom surface", "Prilagođeni surface"),
+        definition: { ...(existing?.definition || {}), ...(draft || {}), id, type: "surface" },
+      });
+    }
+    return Array.from(map.values());
+  }, [config.surfaces, locale, surfaceDrafts, tr]);
+  const activeSurfaceDefinition = useMemo(
+    () =>
+      surfaceCatalog.find((s) => s.id === (surfaceLayoutEditorId || surfacePreviewTarget || assignedSurface))?.definition ||
+      null,
+    [assignedSurface, surfaceCatalog, surfaceLayoutEditorId, surfacePreviewTarget],
+  );
+
+  const surfaceEditorSlotItems = useMemo(() => {
+    const id = surfaceLayoutEditorId;
+    if (!id) return { top: null, middle: null, bottom: null } as const;
+    const def = surfaceCatalog.find((s) => s.id === id)?.definition;
+    const layout = Array.isArray(def?.layout) ? (def.layout as Array<Record<string, unknown>>) : [];
+    return {
+      top: layout.find((x) => String(x.position || "") === "top") ?? null,
+      middle: layout.find((x) => String(x.position || "") === "middle") ?? null,
+      bottom: layout.find((x) => String(x.position || "") === "bottom") ?? null,
+    } as const;
+  }, [surfaceCatalog, surfaceLayoutEditorId]);
+
+  const activeSurfaceDisplayName = useMemo(() => {
+    const id = (surfaceLayoutEditorId || surfacePreviewTarget || assignedSurface || "").trim();
+    if (!id) return tr("请选择 Surface", "Select a surface", "Odaberi surface");
+    return surfaceCatalog.find((s) => s.id === id)?.name || id;
+  }, [surfaceCatalog, surfaceLayoutEditorId, surfacePreviewTarget, assignedSurface, tr]);
+
+  const fetchLiveSurfacePreview = useCallback(
+    async (surfaceIdOverride?: string) => {
+      const sid = (surfaceIdOverride || surfaceLayoutEditorId || assignedSurface || "").trim();
+      if (!sid) return;
+      setSurfacePreviewLoading(true);
+      setSurfacePreviewStatusText(tr("正在生成 Surface 预览...", "Generating surface preview...", "Generiram surface pregled..."));
+      try {
+        const surfaceDef =
+          surfaceCatalog.find((s) => s.id === sid)?.definition ||
+          (sid === assignedSurface ? activeSurfaceDefinition : null) ||
+          null;
+        if (!surfaceDef) throw new Error("missing surface definition");
+        const body: Record<string, unknown> = {
+          surface: surfaceDef,
+          w: SURFACE_PREVIEW_W,
+          h: SURFACE_PREVIEW_H,
+        };
+        if (mac?.trim()) body.mac = mac.trim();
+        const res = await fetch("/api/preview/surface", {
+          method: "POST",
+          headers: authHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error("surface preview failed");
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        replaceSurfacePreviewImg(objectUrl);
+      } catch {
+        showToast(tr("Surface 实时预览失败", "Surface live preview failed", "Surface live pregled nije uspio"), "error");
+      } finally {
+        setSurfacePreviewLoading(false);
+        setSurfacePreviewStatusText("");
+      }
+    },
+    [activeSurfaceDefinition, assignedSurface, mac, replaceSurfacePreviewImg, showToast, surfaceCatalog, surfaceLayoutEditorId, tr],
+  );
+
+  const openSurfaceLayoutEditor = useCallback((surfaceId: string) => {
+    setDeviceRenderMode("surface");
+    setAssignedSurface(surfaceId);
+    setSurfacePreviewTarget(surfaceId);
+    setSurfaceLayoutEditorId(surfaceId);
+    setSelectedSurfaces((prev) => {
+      const next = new Set(prev);
+      next.add(surfaceId);
+      return next;
+    });
+    surfacePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const openSurfaceSlotModal = useCallback(
+    (surfaceId: string, position: "top" | "middle" | "bottom") => {
+      const def = surfaceCatalog.find((s) => s.id === surfaceId)?.definition;
+      const layout = (def?.layout as Array<Record<string, unknown>> | undefined) || [];
+      const item = layout.find((x) => String(x.position || "") === position);
+      setSurfaceSlotModalMode(resolveSurfaceSlotMode(item));
+      setSurfaceSlotModalMemo(typeof item?.memo_text === "string" ? item.memo_text : "");
+      setSurfaceSlotModal({ surfaceId, position });
+    },
+    [surfaceCatalog],
+  );
+
+  const confirmSurfaceSlotModal = useCallback(() => {
+    if (!surfaceSlotModal) return;
+    const { surfaceId, position } = surfaceSlotModal;
+    updateSurfaceSlotMode(
+      surfaceId,
+      position,
+      surfaceSlotModalMode,
+      surfaceSlotModalMode === "MEMO" ? surfaceSlotModalMemo : undefined,
+    );
+    setSurfaceSlotModal(null);
+  }, [surfaceSlotModal, surfaceSlotModalMemo, surfaceSlotModalMode, updateSurfaceSlotMode]);
+
+  const surfaceSlotModeChoices = useMemo(
+    () => catalogItems.filter((it) => it.mode_id.toUpperCase() !== "MY_ADAPTIVE"),
+    [catalogItems],
+  );
+
   const activeModeSchema = settingsMode ? (modeSchemaMap[settingsMode] || []) : [];
 
   const batteryPct = stats?.last_battery_voltage
@@ -2556,9 +3028,270 @@ function ConfigPageInner() {
               </div>
             )}
 
+            {/* Surfaces Tab */}
+            {activeTab === "surfaces" && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-[520px_1fr] gap-6 items-start">
+                  <div className="space-y-6 min-w-0">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">{tr("可用 Surfaces", "Available Surfaces", "Dostupni surfaces")}</CardTitle>
+                        <p className="text-xs text-ink-light font-normal mt-1">
+                          {tr(
+                            "点击卡片打开下方布局；点每个区域在弹窗里选择组件；最后在右侧点「重新生成预览」。",
+                            "Click a surface to open the layout below, tap each zone to pick a widget in the dialog, then use “Regenerate Preview” on the right.",
+                            "Klikni surface za layout ispod, zone za widget u dijalogu, zatim „Ponovno generiraj pregled” desno.",
+                          )}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {surfaceCatalog.map((surface) => {
+                            const isSelected = selectedSurfaces.has(surface.id);
+                            const isEditing = surfaceLayoutEditorId === surface.id;
+                            return (
+                              <div
+                                key={surface.id}
+                                className="flex h-[118px] flex-col overflow-hidden rounded-sm border border-ink/10 bg-white"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => openSurfaceLayoutEditor(surface.id)}
+                                  className={`flex h-20 w-full shrink-0 flex-col justify-start overflow-hidden px-3 py-2 text-left transition-colors ${
+                                    isEditing
+                                      ? "bg-ink text-white ring-2 ring-inset ring-white/35"
+                                      : isSelected
+                                        ? "bg-ink/90 text-white"
+                                        : "hover:bg-paper-dark text-ink"
+                                  }`}
+                                  title={surface.tip}
+                                >
+                                  <div className="text-sm font-semibold leading-tight line-clamp-2">{surface.name}</div>
+                                  <div
+                                    className={`mt-0.5 line-clamp-2 text-[11px] leading-snug ${isEditing || isSelected ? "text-white/85" : "text-ink-light"}`}
+                                  >
+                                    {surface.tip}
+                                  </div>
+                                </button>
+                                <div className="shrink-0 border-t border-ink/10">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSurfaceApply(surface.id)}
+                                    className="flex h-9 w-full items-center justify-center px-2 text-[11px] sm:text-xs text-ink transition-colors hover:bg-ink hover:text-white"
+                                    title={
+                                      isSelected
+                                        ? tr("从设备轮播列表移除", "Remove from device surface list", "Ukloni s popisa surfacea")
+                                        : tr("加入设备轮播列表", "Add to device surface list", "Dodaj na popis surfacea")
+                                    }
+                                  >
+                                    {isSelected ? tr("从列表移除 −", "Remove from list −", "Ukloni s popisa −") : tr("加入列表 +", "Add to list +", "Na popis +")}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {surfaceLayoutEditorId ? (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            {tr("布局", "Layout", "Raspored")} · {surfaceCatalog.find((s) => s.id === surfaceLayoutEditorId)?.name || surfaceLayoutEditorId}
+                          </CardTitle>
+                          <p className="text-xs text-ink-light font-normal mt-1">
+                            {tr("点击区域选择组件", "Tap a zone to choose a widget", "Klikni zonu za odabir widgeta")}
+                          </p>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="rounded-sm border border-ink/15 bg-paper-dark/40 p-3 w-full min-h-[280px]">
+                            <div className="h-full w-full" style={surfaceMosaicGridStyle(surfaceLayoutEditorId)}>
+                              {(["top", "middle", "bottom"] as const).map((slot) => {
+                                const item = surfaceEditorSlotItems[slot];
+                                const mid = resolveSurfaceSlotMode(item);
+                                const wname = modeMeta[mid]?.name || customModeMeta[mid]?.name || mid;
+                                const memoHint =
+                                  mid === "MEMO" && item && typeof item.memo_text === "string" && item.memo_text.trim()
+                                    ? item.memo_text.trim().slice(0, 48) + (item.memo_text.length > 48 ? "…" : "")
+                                    : "";
+                                const tipLine = memoHint || modeMeta[mid]?.tip || customModeMeta[mid]?.tip || "";
+                                const area = surfaceSlotGridArea(surfaceLayoutEditorId, slot);
+                                return (
+                                  <button
+                                    key={slot}
+                                    type="button"
+                                    onClick={() => openSurfaceSlotModal(surfaceLayoutEditorId, slot)}
+                                    style={area ? { gridArea: area } : undefined}
+                                    className="min-h-[48px] rounded-md border border-ink/20 bg-white px-3 py-2 text-left text-sm shadow-[2px_2px_0_0_rgba(0,0,0,0.06)] hover:border-ink hover:bg-paper transition-colors"
+                                  >
+                                    <div className="text-[10px] font-medium uppercase tracking-wide text-ink-light mb-0.5">
+                                      {wname}
+                                    </div>
+                                    <div className="font-medium text-ink wrap-break-word text-[13px] leading-snug line-clamp-3">
+                                      {tipLine.trim() || tr("点击配置", "Tap to configure", "Klikni za postavke")}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-ink-light">
+                            {tr(
+                              "预览由后端生成 PNG（/api/preview/surface）。配置满意后在右侧点「重新生成预览」。",
+                              "Preview is a server PNG (/api/preview/surface). When the layout looks right, click “Regenerate Preview” on the right.",
+                              "Pregled je PNG na poslužitelju (/api/preview/surface). Kad je raspored OK, klikni „Ponovno generiraj pregled” desno.",
+                            )}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <p className="text-sm text-ink-light px-1">{tr("请先点击上方一个 Surface 以编辑布局。", "Click a surface above to edit its layout.", "Klikni surface gore za uređivanje rasporeda.")}</p>
+                    )}
+
+                    <Dialog open={surfaceSlotModal !== null} onClose={() => setSurfaceSlotModal(null)}>
+                      <DialogContent className="max-w-2xl max-h-[min(90vh,720px)] overflow-y-auto">
+                        <DialogHeader onClose={() => setSurfaceSlotModal(null)}>
+                          <DialogTitle>
+                            {surfaceSlotModal
+                              ? surfaceSlotModal.position === "top"
+                                ? tr("槽位 · 上区", "Slot · Top", "Slot · Gore")
+                                : surfaceSlotModal.position === "middle"
+                                ? tr("槽位 · 中区", "Slot · Middle", "Slot · Sredina")
+                                : tr("槽位 · 下区", "Slot · Bottom", "Slot · Dolje")
+                              : ""}
+                          </DialogTitle>
+                          <DialogDescription>
+                            {tr(
+                              "点选与「内容模式」相同的模式卡片；每个槽位会用该模式在对应尺寸下渲染。",
+                              "Pick a mode card (same catalog as Content Modes); each slot renders that mode at the slot size.",
+                              "Odaberi mod (isti katalog kao kod modova); svaki slot renderira taj mod u veličini slota.",
+                            )}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[min(52vh,480px)] overflow-y-auto pr-1">
+                            {surfaceSlotModeChoices.map((it) => {
+                              const mid = it.mode_id.toUpperCase();
+                              const selected = surfaceSlotModalMode === mid;
+                              const name = modeMeta[mid]?.name || customModeMeta[mid]?.name || it.display_name || mid;
+                              const tip = modeMeta[mid]?.tip || customModeMeta[mid]?.tip || it.description || "";
+                              return (
+                                <div
+                                  key={mid}
+                                  className="flex h-[118px] flex-col overflow-hidden rounded-sm border border-ink/10 bg-white shadow-[2px_2px_0_0_rgba(0,0,0,0.04)]"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => setSurfaceSlotModalMode(mid)}
+                                    className={`flex min-h-0 flex-1 flex-col justify-start overflow-hidden px-3 py-2 text-left transition-colors ${
+                                      selected ? "bg-ink text-white" : "hover:bg-paper-dark text-ink"
+                                    }`}
+                                    title={tip}
+                                  >
+                                    <div className="text-sm font-semibold leading-tight line-clamp-2">{name}</div>
+                                    <div
+                                      className={`mt-0.5 line-clamp-3 text-[11px] leading-snug ${selected ? "text-white/85" : "text-ink-light"}`}
+                                    >
+                                      {tip}
+                                    </div>
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {surfaceSlotModalMode === "MEMO" ? (
+                            <div className="space-y-1.5">
+                              <label className="text-xs text-ink-light">{tr("备忘文本", "Memo text", "Memo tekst")}</label>
+                              <textarea
+                                value={surfaceSlotModalMemo}
+                                onChange={(e) => setSurfaceSlotModalMemo(e.target.value)}
+                                rows={3}
+                                placeholder={tr("例如：今日重点", "e.g. Today’s focus", "npr. Fokus dana")}
+                                className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white resize-y"
+                              />
+                            </div>
+                          ) : null}
+                          <div className="flex justify-end gap-2 pt-1 border-t border-ink/10">
+                            <Button type="button" variant="outline" size="sm" onClick={() => setSurfaceSlotModal(null)}>
+                              {tr("取消", "Cancel", "Odustani")}
+                            </Button>
+                            <Button type="button" size="sm" onClick={confirmSurfaceSlotModal}>
+                              {tr("确定", "OK", "U redu")}
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  <div ref={surfacePanelRef} className="min-w-0">
+                    <EInkPreviewPanel
+                      tr={tr}
+                      previewModeLabel={activeSurfaceDisplayName}
+                      previewLoading={surfacePreviewLoading}
+                      previewStatusText={surfacePreviewStatusText}
+                      previewImg={surfacePreviewImg}
+                      previewCacheHit={null}
+                      previewLlmStatus={null}
+                      canApplyToScreen={Boolean(mac && surfacePreviewImg && assignedSurface)}
+                      applyToScreenLoading={surfaceApplyToScreenLoading}
+                      onRegenerate={() => void fetchLiveSurfacePreview()}
+                      onApplyToScreen={handleApplySurfaceToScreen}
+                      emptyStateHint={tr(
+                        "点选上方 Surface 并配置布局后，点此「重新生成预览」",
+                        "Pick a surface above, set its layout, then click Regenerate Preview here.",
+                        "Odaberi surface gore, postavi raspored, zatim ovdje „Ponovno generiraj pregled”.",
+                      )}
+                      rightActions={
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSave}
+                          disabled={!mac || saving}
+                          className="bg-white text-ink border-ink/20 hover:bg-ink hover:text-white active:bg-ink active:text-white disabled:bg-white disabled:text-ink/50"
+                        >
+                          {saving ? <Loader2 size={14} className="animate-spin mr-1 inline" /> : null}
+                          {tr("保存到设备", "Save to Device", "Spremi na uređaj")}
+                        </Button>
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Preferences Tab */}
             {activeTab === "preferences" && (
               <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">{tr("渲染模式", "Render Mode", "Način prikaza")}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDeviceRenderMode("mode")}
+                        className={`rounded-sm border px-3 py-2 text-sm ${
+                          deviceRenderMode === "mode" ? "bg-ink text-white border-ink" : "bg-white text-ink border-ink/20"
+                        }`}
+                      >
+                        {tr("经典模式", "Mode (legacy)", "Legacy mod")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeviceRenderMode("surface")}
+                        className={`rounded-sm border px-3 py-2 text-sm ${
+                          deviceRenderMode === "surface" ? "bg-ink text-white border-ink" : "bg-white text-ink border-ink/20"
+                        }`}
+                      >
+                        {tr("Surface 规则模式", "Surface (advanced)", "Surface (napredno)")}
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
                   <RefreshStrategyEditor
                     tr={tr}
                     locale={locale}

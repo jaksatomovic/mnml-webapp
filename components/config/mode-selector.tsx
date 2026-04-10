@@ -86,13 +86,14 @@ export function ModeSelector({
           modeMeta={{ ...modeMeta, ...customModeMeta }}
           tailItem={
             <button
+              type="button"
               onClick={() => {
                 setEditingCustomMode(true);
                 setCustomJson("");
                 setCustomDesc("");
                 setCustomModeName("");
               }}
-              className="rounded-sm border border-dashed border-ink/20 bg-white px-3 py-2 min-h-[64px] flex flex-col items-center justify-center text-ink-light hover:border-ink/40 hover:bg-paper-dark transition-colors"
+              className="rounded-sm border border-dashed border-ink/20 bg-white px-3 py-2 h-[118px] flex flex-col items-center justify-center text-ink-light hover:border-ink/40 hover:bg-paper-dark transition-colors"
               title={tr("新建自定义模式", "Create custom mode", "Izradi prilagođeni mod")}
             >
               <Plus size={18} className="mb-1" />
@@ -150,39 +151,48 @@ function ModeGrid({
             const isSelected = selectedModes.has(mode);
 
             return (
-              <div key={mode} className="rounded-sm border border-ink/10 bg-white overflow-hidden">
+              <div
+                key={mode}
+                className="flex h-[118px] flex-col rounded-sm border border-ink/10 bg-white overflow-hidden"
+              >
                 <button
+                  type="button"
                   onClick={() => onApply(mode)}
-                  className={`w-full px-3 py-2 text-left transition-colors min-h-[64px] flex flex-col justify-center ${
+                  className={`flex h-20 w-full shrink-0 flex-col justify-start overflow-hidden px-3 py-2 text-left transition-colors ${
                     isSelected ? "bg-ink text-white" : "hover:bg-paper-dark text-ink"
                   }`}
                   title={meta.tip}
                 >
-                  <div className="text-sm font-semibold">{meta.name}</div>
-                  <div className={`text-[11px] mt-0.5 line-clamp-2 ${isSelected ? "text-white/80" : "text-ink-light"}`}>
+                  <div className="text-sm font-semibold leading-tight line-clamp-2">{meta.name}</div>
+                  <div
+                    className={`mt-0.5 line-clamp-2 text-[11px] leading-snug ${isSelected ? "text-white/80" : "text-ink-light"}`}
+                  >
                     {meta.tip}
                   </div>
                 </button>
 
-                <div className={`border-t border-ink/10 grid ${onDelete ? "grid-cols-5" : "grid-cols-4"}`}>
+                <div className={`grid shrink-0 border-t border-ink/10 h-9 ${onDelete ? "grid-cols-5" : "grid-cols-4"}`}>
                   <button
+                    type="button"
                     onClick={() => onPreview(mode)}
-                    className="col-span-2 h-9 px-2 text-[11px] sm:text-xs text-ink hover:bg-ink hover:text-white transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
+                    className="col-span-2 px-2 text-[11px] sm:text-xs text-ink hover:bg-ink hover:text-white transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
                     title={tr("预览", "Preview", "Pregled")}
                   >
                     <Eye size={14} />
                   </button>
                   <button
+                    type="button"
                     onClick={() => onApply(mode)}
-                    className="col-span-2 h-9 px-2 text-[11px] sm:text-xs text-ink hover:bg-ink hover:text-white transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
+                    className="col-span-2 px-2 text-[11px] sm:text-xs text-ink hover:bg-ink hover:text-white transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
                     title={isSelected ? tr("移出轮播", "Remove from rotation", "Ukloni iz rotacije") : tr("加入轮播", "Add to rotation", "Dodaj u rotaciju")}
                   >
                     {isSelected ? "-" : "+"}
                   </button>
                   {onDelete ? (
                     <button
+                      type="button"
                       onClick={() => onDelete(mode)}
-                      className="h-9 px-2 text-[11px] sm:text-xs text-ink hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center"
+                      className="px-2 text-[11px] sm:text-xs text-ink hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center"
                       title={tr("删除模式", "Delete mode", "Izbriši mod")}
                     >
                       <Trash2 size={14} />

@@ -19,6 +19,8 @@ export function EInkPreviewPanel({
   onRegenerate,
   onApplyToScreen,
   rightActions,
+  emptyStateHint,
+  regenerateDisabled,
 }: {
   tr: (zh: string, en: string, hr?: string) => string;
   previewModeLabel: string;
@@ -32,9 +34,13 @@ export function EInkPreviewPanel({
   onRegenerate: () => void;
   onApplyToScreen: () => void;
   rightActions?: ReactNode;
+  /** Overrides the default empty-state line under the eye icon */
+  emptyStateHint?: string;
+  /** Extra disable for Regenerate (e.g. Surfaces: no surface selected yet). */
+  regenerateDisabled?: boolean;
 }) {
   return (
-    <Card>
+    <Card className="w-full max-w-[400px] mx-auto">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-baseline justify-between gap-3 flex-wrap">
           <span className="text-base font-semibold text-ink">{tr("水墨屏预览", "E-Ink Preview", "E-Ink pregled")}</span>
@@ -42,30 +48,31 @@ export function EInkPreviewPanel({
         </CardTitle>
       </CardHeader>
       {/* keep sizing consistent with /preview page */}
-      <CardContent className="h-[calc(55vh-80px)] w-[400px] flex flex-col p-0">
-        <div className="border border-ink/10 rounded-sm bg-paper flex flex-col items-center justify-center flex-1 w-full">
+      <CardContent className="h-[calc(55vh-80px)] w-full max-w-[400px] mx-auto flex flex-col p-0">
+        <div className="border border-ink/10 rounded-sm bg-paper flex flex-col items-center justify-center flex-1 w-full min-h-0 py-3 px-3">
           {previewLoading ? (
-            <div className="flex items-center justify-center w-full">
-              <div className="text-center">
+            <div className="flex w-full max-w-[400px] aspect-[4/3] items-center justify-center rounded-sm border border-ink/15 bg-white">
+              <div className="text-center px-4">
                 <Loader2 size={32} className="animate-spin mx-auto text-ink-light mb-3" />
                 <p className="text-sm text-ink-light">{previewStatusText || tr("预览生成中...", "Generating preview...", "Generiram pregled...")}</p>
               </div>
             </div>
           ) : previewImg ? (
-            <div className="flex flex-col items-center gap-2 w-full px-4">
-              <div className="relative w-full max-w-xl / max-w-none aspect-[4/3] bg-white border border-ink/20 rounded-sm overflow-hidden">
+            <div className="flex flex-col items-center gap-2 w-full">
+              <div className="relative w-full max-w-[400px] aspect-[4/3] bg-white border border-ink/20 rounded-sm overflow-hidden shrink-0">
                 <Image src={previewImg} alt="Preview" fill unoptimized className="object-contain" />
               </div>
               {previewLlmStatus ? (
-                <p className="text-[11px] text-ink-light text-center px-4">{previewLlmStatus}</p>
+                <p className="text-[11px] text-ink-light text-center px-2 max-w-[400px]">{previewLlmStatus}</p>
               ) : null}
             </div>
           ) : (
-            <div className="flex items-center justify-center w-full">
-              <div className="text-center">
-                <Eye size={32} className="mx-auto text-ink-light mb-3" />
-                <p className="text-sm text-ink-light">{tr("点击任意模式的「预览」查看效果", "Click Preview on any mode to view output", "Klikni Pregled na bilo kojem modu za prikaz rezultata")}</p>
-              </div>
+            <div className="flex w-full max-w-[400px] aspect-[4/3] flex-col items-center justify-center rounded-sm border border-ink/20 bg-white px-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.04)]">
+              <Eye size={32} className="text-ink-light mb-3 shrink-0" />
+              <p className="text-sm text-ink-light text-center leading-snug">
+                {emptyStateHint ||
+                  tr("点击任意模式的「预览」查看效果", "Click Preview on any mode to view output", "Klikni Pregled na bilo kojem modu za prikaz rezultata")}
+              </p>
             </div>
           )}
         </div>
@@ -85,7 +92,7 @@ export function EInkPreviewPanel({
               variant="outline"
               size="sm"
               onClick={onRegenerate}
-              disabled={!previewModeLabel || previewLoading}
+              disabled={!previewModeLabel || previewLoading || Boolean(regenerateDisabled)}
               className="bg-white text-ink border-ink/20 hover:bg-ink hover:text-white active:bg-ink active:text-white disabled:bg-white disabled:text-ink/50"
             >
               {tr("重新生成预览", "Regenerate Preview", "Ponovno generiraj pregled")}

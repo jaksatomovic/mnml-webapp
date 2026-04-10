@@ -14,6 +14,11 @@ import { authHeaders, fetchCurrentUser } from "@/lib/auth";
 import { ColorSelect } from "@/components/ui/color-select";
 import { CalendarReminders } from "@/components/config/calendar-reminders";
 import { TimetableEditor, type TimetableData } from "@/components/config/timetable-editor";
+import {
+  DEFAULT_PANEL_H,
+  DEFAULT_PANEL_W,
+  inksightBodySize,
+} from "@/lib/inksight-chrome";
 
 type ModeCatalogItem = {
   mode_id: string;
@@ -367,6 +372,10 @@ export default function ExperiencePage() {
       if (Object.keys(mergedOverride).length > 0) {
         params.set("mode_override", JSON.stringify(mergedOverride));
       }
+
+      const body = inksightBodySize(DEFAULT_PANEL_W, DEFAULT_PANEL_H);
+      params.set("w", String(body.w));
+      params.set("h", String(body.h));
 
       const res = await fetch(`/api/preview?${params.toString()}`, {
         headers: authHeaders(userLlmApiKey ? { "x-inksight-llm-api-key": userLlmApiKey } : undefined),
