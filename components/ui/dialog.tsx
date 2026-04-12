@@ -7,9 +7,11 @@ interface DialogProps {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  /** Tailwind max-width on the panel (default max-w-lg). */
+  maxWidthClassName?: string;
 }
 
-export function Dialog({ open, onClose, children }: DialogProps) {
+export function Dialog({ open, onClose, children, maxWidthClassName = "max-w-lg" }: DialogProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export function Dialog({ open, onClose, children }: DialogProps) {
       }}
     >
       <div className="fixed inset-0 bg-black/20" />
-      <div className="relative z-10 w-full max-w-lg mx-4 animate-fade-in">
+      <div className={`relative z-10 w-full mx-4 animate-fade-in ${maxWidthClassName}`}>
         {children}
       </div>
     </div>

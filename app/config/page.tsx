@@ -7,6 +7,7 @@ import { DeviceInfo } from "@/components/config/device-info";
 import { LocationPicker } from "@/components/config/location-picker";
 import { ModeSelector } from "@/components/config/mode-selector";
 import { EInkPreviewPanel } from "@/components/config/eink-preview-panel";
+import { SurfaceLayoutDialog } from "@/components/config/surface-layout-dialog";
 import {
   DEFAULT_PANEL_H,
   DEFAULT_PANEL_W,
@@ -46,6 +47,13 @@ import {
   locationsEqual,
   type LocationValue,
 } from "@/lib/locations";
+import {
+  buildGridSpec,
+  buildLayoutFromSlots,
+  normalizeSurfaceGridSpec,
+  sortSurfaceSlotsReadingOrder as sortSurfaceSlotsReadingOrderLib,
+  type SurfaceGridSlot,
+} from "@/lib/surface-layout";
 
 interface UserDevice {
   mac: string;
@@ -81,6 +89,8 @@ type ModeCatalogItem = {
   display_name?: string;
   description?: string;
   settings_schema?: ModeSettingSchemaItem[];
+  /** Surface grid: which slot shapes this mode supports (from mode JSON). */
+  supported_slot_types?: string[];
   i18n?: {
     zh?: { name?: string; tip?: string };
     en?: { name?: string; tip?: string };
@@ -152,19 +162,31 @@ const TABS = [
   { id: "stats", label: { zh: "状态", en: "Status", hr: "Status" }, icon: BarChart3 },
 ] as const;
 
+/**
+ * Preset surfaces: MVP 2×2 grid only; topologies differ so Morning / Work / Home don’t look the same:
+ * - Morning: two SMALL (row 0) + WIDE (row 1)
+ * - Work: WIDE (row 0) + two SMALL (row 1)
+ * - Home: TALL (col 0) + two SMALL stacked (col 1)
+ */
 const DEFAULT_SURFACE_LIBRARY = [
   {
     id: "morning",
     name: { zh: "晨间", en: "Morning", hr: "Jutro" },
-    tip: { zh: "天气 + 日历摘要", en: "Weather + calendar summary", hr: "Vrijeme + kalendar" },
+    tip: {
+      zh: "天气与今日一句，底部宽区放月历",
+      en: "Weather + daily line; wide strip = month calendar",
+      hr: "Vrijeme + dnevni red; široki red = kalendar mjeseca",
+    },
     definition: {
       id: "morning",
       type: "surface",
-      layout: [
-        { mode: "WEATHER", position: "top" },
-        { mode: "CALENDAR", position: "middle" },
-        { mode: "DAILY", position: "bottom" },
+      grid: { columns: 2, rows: 2, gap: 6, padding: 8 },
+      slots: [
+        { id: "top_left", x: 0, y: 0, w: 1, h: 1, slot_type: "SMALL", mode_id: "WEATHER" },
+        { id: "top_right", x: 1, y: 0, w: 1, h: 1, slot_type: "SMALL", mode_id: "DAILY" },
+        { id: "bottom", x: 0, y: 1, w: 2, h: 1, slot_type: "WIDE", mode_id: "CALENDAR" },
       ],
+      layout: [],
       refresh: { mode: "hybrid", interval: 300 },
       rules: [],
     },
@@ -172,15 +194,21 @@ const DEFAULT_SURFACE_LIBRARY = [
   {
     id: "work",
     name: { zh: "工作", en: "Work", hr: "Posao" },
-    tip: { zh: "日历 + 任务", en: "Calendar + tasks", hr: "Kalendar + zadaci" },
+    tip: {
+      zh: "上方宽条简报，下方左日历右斯多葛",
+      en: "Wide briefing strip on top; calendar + stoic in two tiles below",
+      hr: "Široki briefing gore; kalendar + stoik u dva polja dolje",
+    },
     definition: {
       id: "work",
       type: "surface",
-      layout: [
-        { mode: "CALENDAR", position: "top" },
-        { mode: "BRIEFING", position: "middle" },
-        { mode: "STOIC", position: "bottom" },
+      grid: { columns: 2, rows: 2, gap: 6, padding: 8 },
+      slots: [
+        { id: "top_wide", x: 0, y: 0, w: 2, h: 1, slot_type: "WIDE", mode_id: "BRIEFING" },
+        { id: "bottom_left", x: 0, y: 1, w: 1, h: 1, slot_type: "SMALL", mode_id: "CALENDAR" },
+        { id: "bottom_right", x: 1, y: 1, w: 1, h: 1, slot_type: "SMALL", mode_id: "STOIC" },
       ],
+      layout: [],
       refresh: { mode: "hybrid", interval: 300 },
       rules: [],
     },
@@ -188,15 +216,21 @@ const DEFAULT_SURFACE_LIBRARY = [
   {
     id: "home",
     name: { zh: "居家", en: "Home", hr: "Dom" },
-    tip: { zh: "轻量资讯面板", en: "Lightweight info board", hr: "Lagan info panel" },
+    tip: {
+      zh: "左侧长条天气，右侧上禅下诗",
+      en: "Tall weather on the left; zen above + poetry below on the right",
+      hr: "Visoko vrijeme lijevo; zen gore i poezija dolje desno",
+    },
     definition: {
       id: "home",
       type: "surface",
-      layout: [
-        { mode: "WEATHER", position: "top" },
-        { mode: "DAILY", position: "middle" },
-        { mode: "CALENDAR", position: "bottom" },
+      grid: { columns: 2, rows: 2, gap: 6, padding: 8 },
+      slots: [
+        { id: "left_tall", x: 0, y: 0, w: 1, h: 2, slot_type: "TALL", mode_id: "WEATHER" },
+        { id: "right_top", x: 1, y: 0, w: 1, h: 1, slot_type: "SMALL", mode_id: "ZEN" },
+        { id: "right_bottom", x: 1, y: 1, w: 1, h: 1, slot_type: "SMALL", mode_id: "POETRY" },
       ],
+      layout: [],
       refresh: { mode: "polling", interval: 600 },
       rules: [],
     },
@@ -223,11 +257,41 @@ function resolveSurfaceSlotMode(item: Record<string, unknown> | null | undefined
   return legacyTypeToMode(String(item.type ?? "text"));
 }
 
+/** Surface uses fixed grid + slots (spec); legacy surfaces use layout[].position only. */
+function surfaceUsesGridSlots(def: Record<string, unknown> | null | undefined): boolean {
+  if (!def || typeof def !== "object") return false;
+  const slots = def.slots;
+  const grid = def.grid;
+  return Array.isArray(slots) && slots.length > 0 && grid !== null && typeof grid === "object";
+}
+
+const sortSurfaceSlotsReadingOrder = sortSurfaceSlotsReadingOrderLib;
+
+function gridStyleFromSurfaceDefinition(def: Record<string, unknown>): CSSProperties {
+  const g = def.grid as { columns?: number; rows?: number; gap?: number; padding?: number } | undefined;
+  const norm = normalizeSurfaceGridSpec(g);
+  const cols = norm.columns;
+  const rows = norm.rows;
+  const gap = norm.gap;
+  const pad = norm.padding;
+  return {
+    display: "grid",
+    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+    gap: `${gap}px`,
+    padding: `${pad}px`,
+    aspectRatio: "4 / 3",
+    width: "100%",
+    minHeight: "260px",
+    maxHeight: "min(52vh, 420px)",
+  };
+}
+
 const SURFACE_PREVIEW_W = 400;
 const SURFACE_PREVIEW_H = 300;
 
-/** CSS mosaic for the layout editor — mirrors backend presets for morning / work / home. */
-function surfaceMosaicGridStyle(surfaceId: string): CSSProperties {
+/** Legacy CSS mosaic when a surface has no grid+slots (position top/middle/bottom only). */
+function legacySurfaceMosaicGridStyle(surfaceId: string): CSSProperties {
   const base: CSSProperties = {
     display: "grid",
     gap: "8px",
@@ -283,6 +347,14 @@ function surfaceSlotGridArea(surfaceId: string, slot: "top" | "middle" | "bottom
   }
   return undefined;
 }
+
+type SurfaceSlotModalState =
+  | { kind: "grid"; surfaceId: string; slotId: string }
+  | { kind: "legacy"; surfaceId: string; position: "top" | "middle" | "bottom" };
+
+type SurfaceSlotEditTarget =
+  | { type: "grid"; slotId: string }
+  | { type: "legacy"; position: "top" | "middle" | "bottom" };
 
 type TabId = (typeof TABS)[number]["id"];
 
@@ -662,14 +734,13 @@ function ConfigPageInner() {
   const [assignedLegacyMode, setAssignedLegacyMode] = useState("");
   const [assignedSurface, setAssignedSurface] = useState("");
   const [surfacePreviewTarget, setSurfacePreviewTarget] = useState("");
-  /** Surface whose 3-slot layout editor is open (user clicked the surface card). */
+  /** Surface whose layout editor is open (grid+slots or legacy top/middle/bottom). */
   const [surfaceLayoutEditorId, setSurfaceLayoutEditorId] = useState("");
-  const [surfaceSlotModal, setSurfaceSlotModal] = useState<null | { surfaceId: string; position: "top" | "middle" | "bottom" }>(
-    null,
-  );
+  const [surfaceSlotModal, setSurfaceSlotModal] = useState<SurfaceSlotModalState | null>(null);
   const [surfaceSlotModalMode, setSurfaceSlotModalMode] = useState<string>("STOIC");
   const [surfaceSlotModalMemo, setSurfaceSlotModalMemo] = useState("");
   const [surfaceDrafts, setSurfaceDrafts] = useState<Record<string, Record<string, unknown>>>({});
+  const [surfaceLayoutDialogOpen, setSurfaceLayoutDialogOpen] = useState(false);
   const [surfacePreviewImg, setSurfacePreviewImg] = useState<string | null>(null);
   const [surfacePreviewLoading, setSurfacePreviewLoading] = useState(false);
   const [surfacePreviewStatusText, setSurfacePreviewStatusText] = useState("");
@@ -2163,41 +2234,6 @@ function ConfigPageInner() {
     [assignedSurface, replaceSurfacePreviewImg, selectedSurfaces, showToast, surfaceLayoutEditorId, toggleSurface, tr],
   );
 
-  const updateSurfaceSlotMode = useCallback(
-    (surfaceId: string, position: "top" | "middle" | "bottom", modeId: string, memoText?: string) => {
-      const mid = (modeId || "STOIC").toUpperCase();
-      setSurfaceDrafts((prev) => {
-        const current = (prev[surfaceId] || {
-          id: surfaceId,
-          type: "surface",
-          refresh: { mode: "hybrid", interval: 300 },
-          rules: [],
-        }) as Record<string, unknown>;
-        const existingLayout = Array.isArray(current.layout) ? (current.layout as Array<Record<string, unknown>>) : [];
-        const filtered = existingLayout.filter((item) => String(item.position || "") !== position);
-        const block: Record<string, unknown> = { mode: mid, position };
-        if (mid === "MEMO") {
-          const t = (memoText ?? "").trim();
-          if (t) block.memo_text = t;
-        }
-        const nextLayout = [...filtered, block].sort((a, b) => {
-          const order = { top: 0, middle: 1, bottom: 2 } as const;
-          return (order[String(a.position || "middle") as keyof typeof order] ?? 1) - (order[String(b.position || "middle") as keyof typeof order] ?? 1);
-        });
-        return {
-          ...prev,
-          [surfaceId]: {
-            ...current,
-            id: surfaceId,
-            type: "surface",
-            layout: nextLayout,
-          },
-        };
-      });
-    },
-    [],
-  );
-
   const handleCustomModeDelete = async (m: string) => {
     const modeId = (m || "").toUpperCase();
     if (!mac) {
@@ -2464,12 +2500,165 @@ function ConfigPageInner() {
     }
     return Array.from(map.values());
   }, [config.surfaces, locale, surfaceDrafts, tr]);
+
+  const updateSurfaceSlotMode = useCallback(
+    (surfaceId: string, target: SurfaceSlotEditTarget, modeId: string, memoText?: string) => {
+      const mid = (modeId || "STOIC").toUpperCase();
+      setSurfaceDrafts((prev) => {
+        const cat = surfaceCatalog.find((s) => s.id === surfaceId);
+        const current = { ...(cat?.definition || {}) } as Record<string, unknown>;
+        if (!cat && Object.keys(current).length === 0) return prev;
+
+        if (target.type === "grid") {
+          const raw = Array.isArray(current.slots) ? ([...current.slots] as SurfaceGridSlot[]) : [];
+          const slots = raw.map((s) => ({ ...s }));
+          const si = slots.findIndex((s) => String(s.id || "") === target.slotId);
+          if (si < 0) return prev;
+          slots[si] = { ...slots[si], mode_id: mid, mode: mid };
+          const ordered = sortSurfaceSlotsReadingOrder(slots);
+          const layout = ordered.map((s, i) => {
+            const m = String(s.mode_id || s.mode || "STOIC").toUpperCase();
+            const blk: Record<string, unknown> = { mode: m, position: `slot_${i}` };
+            if (s.id) blk.slot_id = s.id;
+            if (m === "MEMO" && String(s.id || "") === target.slotId) {
+              const t = (memoText ?? "").trim();
+              if (t) blk.memo_text = t;
+            }
+            return blk;
+          });
+          return {
+            ...prev,
+            [surfaceId]: {
+              ...current,
+              id: surfaceId,
+              type: "surface",
+              slots,
+              layout,
+            },
+          };
+        }
+
+        const position = target.position;
+        const shell =
+          Object.keys(current).length > 0
+            ? current
+            : ({
+                id: surfaceId,
+                type: "surface",
+                refresh: { mode: "hybrid", interval: 300 },
+                rules: [],
+              } as Record<string, unknown>);
+        const existingLayout = Array.isArray(shell.layout) ? (shell.layout as Array<Record<string, unknown>>) : [];
+        const filtered = existingLayout.filter((item) => String(item.position || "") !== position);
+        const block: Record<string, unknown> = { mode: mid, position };
+        if (mid === "MEMO") {
+          const t = (memoText ?? "").trim();
+          if (t) block.memo_text = t;
+        }
+        const nextLayout = [...filtered, block].sort((a, b) => {
+          const order = { top: 0, middle: 1, bottom: 2 } as const;
+          return (
+            (order[String(a.position || "middle") as keyof typeof order] ?? 1) -
+            (order[String(b.position || "middle") as keyof typeof order] ?? 1)
+          );
+        });
+        return {
+          ...prev,
+          [surfaceId]: {
+            ...shell,
+            id: surfaceId,
+            type: "surface",
+            layout: nextLayout,
+          },
+        };
+      });
+    },
+    [surfaceCatalog],
+  );
+
+  const applySurfaceLayoutFromDialog = useCallback(
+    (payload: {
+      grid: { columns: number; rows: number; gap: number; padding: number };
+      slots: SurfaceGridSlot[];
+      layout: Array<Record<string, unknown>>;
+    }) => {
+      const sid = surfaceLayoutEditorId.trim();
+      if (!sid) return;
+      const cat = surfaceCatalog.find((s) => s.id === sid);
+      const current = { ...(cat?.definition || {}) } as Record<string, unknown>;
+      setSurfaceDrafts((prev) => ({
+        ...prev,
+        [sid]: {
+          ...current,
+          id: sid,
+          type: "surface",
+          grid: normalizeSurfaceGridSpec(payload.grid),
+          slots: payload.slots,
+          layout: payload.layout,
+        },
+      }));
+      showToast(tr("已应用网格布局", "Grid layout applied", "Mrežni raspored je primijenjen"), "success");
+    },
+    [surfaceLayoutEditorId, surfaceCatalog, showToast, tr],
+  );
+
+  const createCustomSurface = useCallback(() => {
+    const id = `custom_${Date.now().toString(36)}`;
+    const slots: SurfaceGridSlot[] = [
+      { id: "a", x: 0, y: 0, w: 1, h: 1, slot_type: "SMALL", mode_id: "STOIC" },
+      { id: "b", x: 1, y: 0, w: 1, h: 1, slot_type: "SMALL", mode_id: "STOIC" },
+      { id: "c", x: 0, y: 1, w: 1, h: 1, slot_type: "SMALL", mode_id: "STOIC" },
+      { id: "d", x: 1, y: 1, w: 1, h: 1, slot_type: "SMALL", mode_id: "STOIC" },
+    ];
+    const grid = buildGridSpec(2, 2);
+    const layout = buildLayoutFromSlots(slots, []);
+    setSurfaceDrafts((prev) => ({
+      ...prev,
+      [id]: {
+        id,
+        type: "surface",
+        grid,
+        slots,
+        layout,
+        refresh: { mode: "hybrid", interval: 300 },
+        rules: [],
+      },
+    }));
+    setDeviceRenderMode("surface");
+    setAssignedSurface(id);
+    setSurfacePreviewTarget(id);
+    setSurfaceLayoutEditorId(id);
+    setSelectedSurfaces((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    showToast(tr("已创建自定义 Surface", "Created custom surface", "Kreiran prilagođeni surface"), "success");
+  }, [showToast, tr]);
+
   const activeSurfaceDefinition = useMemo(
     () =>
       surfaceCatalog.find((s) => s.id === (surfaceLayoutEditorId || surfacePreviewTarget || assignedSurface))?.definition ||
       null,
     [assignedSurface, surfaceCatalog, surfaceLayoutEditorId, surfacePreviewTarget],
   );
+
+  const layoutEditorSurfaceDefinition = useMemo(() => {
+    const id = surfaceLayoutEditorId;
+    if (!id) return null;
+    return surfaceCatalog.find((s) => s.id === id)?.definition ?? null;
+  }, [surfaceCatalog, surfaceLayoutEditorId]);
+
+  const surfaceEditorUsesGrid = useMemo(
+    () => surfaceUsesGridSlots(layoutEditorSurfaceDefinition),
+    [layoutEditorSurfaceDefinition],
+  );
+
+  const surfaceEditorGridSlots = useMemo(() => {
+    if (!layoutEditorSurfaceDefinition || !surfaceUsesGridSlots(layoutEditorSurfaceDefinition)) return null;
+    const slots = (layoutEditorSurfaceDefinition.slots as SurfaceGridSlot[]) || [];
+    return sortSurfaceSlotsReadingOrder(slots);
+  }, [layoutEditorSurfaceDefinition]);
 
   const surfaceEditorSlotItems = useMemo(() => {
     const id = surfaceLayoutEditorId;
@@ -2540,26 +2729,44 @@ function ConfigPageInner() {
   }, []);
 
   const openSurfaceSlotModal = useCallback(
-    (surfaceId: string, position: "top" | "middle" | "bottom") => {
+    (surfaceId: string, target: SurfaceSlotEditTarget) => {
       const def = surfaceCatalog.find((s) => s.id === surfaceId)?.definition;
       const layout = (def?.layout as Array<Record<string, unknown>> | undefined) || [];
-      const item = layout.find((x) => String(x.position || "") === position);
+      if (target.type === "grid") {
+        const slots = (def?.slots as SurfaceGridSlot[]) || [];
+        const slot = slots.find((s) => String(s.id || "") === target.slotId);
+        const block = layout.find((b) => String(b.slot_id || "") === target.slotId);
+        const modeSource = block || slot || null;
+        setSurfaceSlotModalMode(resolveSurfaceSlotMode(modeSource));
+        setSurfaceSlotModalMemo(typeof block?.memo_text === "string" ? block.memo_text : "");
+        setSurfaceSlotModal({ kind: "grid", surfaceId, slotId: target.slotId });
+        return;
+      }
+      const item = layout.find((x) => String(x.position || "") === target.position);
       setSurfaceSlotModalMode(resolveSurfaceSlotMode(item));
       setSurfaceSlotModalMemo(typeof item?.memo_text === "string" ? item.memo_text : "");
-      setSurfaceSlotModal({ surfaceId, position });
+      setSurfaceSlotModal({ kind: "legacy", surfaceId, position: target.position });
     },
     [surfaceCatalog],
   );
 
   const confirmSurfaceSlotModal = useCallback(() => {
     if (!surfaceSlotModal) return;
-    const { surfaceId, position } = surfaceSlotModal;
-    updateSurfaceSlotMode(
-      surfaceId,
-      position,
-      surfaceSlotModalMode,
-      surfaceSlotModalMode === "MEMO" ? surfaceSlotModalMemo : undefined,
-    );
+    if (surfaceSlotModal.kind === "grid") {
+      updateSurfaceSlotMode(
+        surfaceSlotModal.surfaceId,
+        { type: "grid", slotId: surfaceSlotModal.slotId },
+        surfaceSlotModalMode,
+        surfaceSlotModalMode === "MEMO" ? surfaceSlotModalMemo : undefined,
+      );
+    } else {
+      updateSurfaceSlotMode(
+        surfaceSlotModal.surfaceId,
+        { type: "legacy", position: surfaceSlotModal.position },
+        surfaceSlotModalMode,
+        surfaceSlotModalMode === "MEMO" ? surfaceSlotModalMemo : undefined,
+      );
+    }
     setSurfaceSlotModal(null);
   }, [surfaceSlotModal, surfaceSlotModalMemo, surfaceSlotModalMode, updateSurfaceSlotMode]);
 
@@ -3035,7 +3242,13 @@ function ConfigPageInner() {
                   <div className="space-y-6 min-w-0">
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-base">{tr("可用 Surfaces", "Available Surfaces", "Dostupni surfaces")}</CardTitle>
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <CardTitle className="text-base">{tr("可用 Surfaces", "Available Surfaces", "Dostupni surfaces")}</CardTitle>
+                          <Button type="button" variant="outline" size="sm" className="text-xs shrink-0" onClick={createCustomSurface}>
+                            <Plus size={14} className="mr-1 inline" />
+                            {tr("新建自定义", "New custom", "Novi prilagođeni")}
+                          </Button>
+                        </div>
                         <p className="text-xs text-ink-light font-normal mt-1">
                           {tr(
                             "点击卡片打开下方布局；点每个区域在弹窗里选择组件；最后在右侧点「重新生成预览」。",
@@ -3097,43 +3310,112 @@ function ConfigPageInner() {
                     {surfaceLayoutEditorId ? (
                       <Card>
                         <CardHeader>
-                          <CardTitle className="text-base">
-                            {tr("布局", "Layout", "Raspored")} · {surfaceCatalog.find((s) => s.id === surfaceLayoutEditorId)?.name || surfaceLayoutEditorId}
-                          </CardTitle>
-                          <p className="text-xs text-ink-light font-normal mt-1">
-                            {tr("点击区域选择组件", "Tap a zone to choose a widget", "Klikni zonu za odabir widgeta")}
-                          </p>
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <CardTitle className="text-base">
+                                {tr("布局", "Layout", "Raspored")} · {surfaceCatalog.find((s) => s.id === surfaceLayoutEditorId)?.name || surfaceLayoutEditorId}
+                              </CardTitle>
+                              <p className="text-xs text-ink-light font-normal mt-1">
+                                {tr("点击区域选择组件", "Tap a zone to choose a widget", "Klikni zonu za odabir widgeta")}
+                              </p>
+                            </div>
+                            {surfaceEditorUsesGrid ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-xs shrink-0"
+                                onClick={() => setSurfaceLayoutDialogOpen(true)}
+                              >
+                                {tr("编辑网格…", "Edit grid…", "Uredi mrežu…")}
+                              </Button>
+                            ) : null}
+                          </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
                           <div className="rounded-sm border border-ink/15 bg-paper-dark/40 p-3 w-full min-h-[280px]">
-                            <div className="h-full w-full" style={surfaceMosaicGridStyle(surfaceLayoutEditorId)}>
-                              {(["top", "middle", "bottom"] as const).map((slot) => {
-                                const item = surfaceEditorSlotItems[slot];
-                                const mid = resolveSurfaceSlotMode(item);
-                                const wname = modeMeta[mid]?.name || customModeMeta[mid]?.name || mid;
-                                const memoHint =
-                                  mid === "MEMO" && item && typeof item.memo_text === "string" && item.memo_text.trim()
-                                    ? item.memo_text.trim().slice(0, 48) + (item.memo_text.length > 48 ? "…" : "")
-                                    : "";
-                                const tipLine = memoHint || modeMeta[mid]?.tip || customModeMeta[mid]?.tip || "";
-                                const area = surfaceSlotGridArea(surfaceLayoutEditorId, slot);
-                                return (
-                                  <button
-                                    key={slot}
-                                    type="button"
-                                    onClick={() => openSurfaceSlotModal(surfaceLayoutEditorId, slot)}
-                                    style={area ? { gridArea: area } : undefined}
-                                    className="min-h-[48px] rounded-md border border-ink/20 bg-white px-3 py-2 text-left text-sm shadow-[2px_2px_0_0_rgba(0,0,0,0.06)] hover:border-ink hover:bg-paper transition-colors"
-                                  >
-                                    <div className="text-[10px] font-medium uppercase tracking-wide text-ink-light mb-0.5">
-                                      {wname}
-                                    </div>
-                                    <div className="font-medium text-ink wrap-break-word text-[13px] leading-snug line-clamp-3">
-                                      {tipLine.trim() || tr("点击配置", "Tap to configure", "Klikni za postavke")}
-                                    </div>
-                                  </button>
-                                );
-                              })}
+                            <div
+                              className="h-full w-full"
+                              style={
+                                surfaceEditorUsesGrid && layoutEditorSurfaceDefinition
+                                  ? gridStyleFromSurfaceDefinition(layoutEditorSurfaceDefinition)
+                                  : legacySurfaceMosaicGridStyle(surfaceLayoutEditorId)
+                              }
+                            >
+                              {surfaceEditorUsesGrid && surfaceEditorGridSlots && layoutEditorSurfaceDefinition
+                                ? surfaceEditorGridSlots.map((slot) => {
+                                    const slotId = String(slot.id || "");
+                                    const layoutBlocks = Array.isArray(layoutEditorSurfaceDefinition.layout)
+                                      ? (layoutEditorSurfaceDefinition.layout as Array<Record<string, unknown>>)
+                                      : [];
+                                    const block = layoutBlocks.find((b) => String(b.slot_id || "") === slotId);
+                                    const mid = resolveSurfaceSlotMode(slot);
+                                    const wname = modeMeta[mid]?.name || customModeMeta[mid]?.name || mid;
+                                    const memoHint =
+                                      mid === "MEMO" &&
+                                      block &&
+                                      typeof block.memo_text === "string" &&
+                                      block.memo_text.trim()
+                                        ? block.memo_text.trim().slice(0, 48) + (block.memo_text.length > 48 ? "…" : "")
+                                        : "";
+                                    const tipLine = memoHint || modeMeta[mid]?.tip || customModeMeta[mid]?.tip || "";
+                                    const st = String(slot.slot_type || "").toUpperCase() || "—";
+                                    return (
+                                      <button
+                                        key={slotId || `g-${String(slot.x)}-${String(slot.y)}`}
+                                        type="button"
+                                        onClick={() =>
+                                          openSurfaceSlotModal(surfaceLayoutEditorId, {
+                                            type: "grid",
+                                            slotId: slotId || `slot-${String(slot.x)}-${String(slot.y)}`,
+                                          })
+                                        }
+                                        style={{
+                                          gridColumn: `${Number(slot.x ?? 0) + 1} / span ${Number(slot.w ?? 1)}`,
+                                          gridRow: `${Number(slot.y ?? 0) + 1} / span ${Number(slot.h ?? 1)}`,
+                                        }}
+                                        className="min-h-[48px] min-w-0 rounded-md border border-ink/20 bg-white px-3 py-2 text-left text-sm shadow-[2px_2px_0_0_rgba(0,0,0,0.06)] hover:border-ink hover:bg-paper transition-colors"
+                                      >
+                                        <div className="text-[10px] font-medium uppercase tracking-wide text-ink-light mb-0.5">
+                                          {st}
+                                          {slotId ? ` · ${slotId}` : ""}
+                                        </div>
+                                        <div className="text-[11px] font-semibold text-ink mb-0.5 line-clamp-1">{wname}</div>
+                                        <div className="font-medium text-ink wrap-break-word text-[13px] leading-snug line-clamp-3">
+                                          {tipLine.trim() || tr("点击配置", "Tap to configure", "Klikni za postavke")}
+                                        </div>
+                                      </button>
+                                    );
+                                  })
+                                : (["top", "middle", "bottom"] as const).map((slot) => {
+                                    const item = surfaceEditorSlotItems[slot];
+                                    const mid = resolveSurfaceSlotMode(item);
+                                    const wname = modeMeta[mid]?.name || customModeMeta[mid]?.name || mid;
+                                    const memoHint =
+                                      mid === "MEMO" && item && typeof item.memo_text === "string" && item.memo_text.trim()
+                                        ? item.memo_text.trim().slice(0, 48) + (item.memo_text.length > 48 ? "…" : "")
+                                        : "";
+                                    const tipLine = memoHint || modeMeta[mid]?.tip || customModeMeta[mid]?.tip || "";
+                                    const area = surfaceSlotGridArea(surfaceLayoutEditorId, slot);
+                                    return (
+                                      <button
+                                        key={slot}
+                                        type="button"
+                                        onClick={() =>
+                                          openSurfaceSlotModal(surfaceLayoutEditorId, { type: "legacy", position: slot })
+                                        }
+                                        style={area ? { gridArea: area } : undefined}
+                                        className="min-h-[48px] rounded-md border border-ink/20 bg-white px-3 py-2 text-left text-sm shadow-[2px_2px_0_0_rgba(0,0,0,0.06)] hover:border-ink hover:bg-paper transition-colors"
+                                      >
+                                        <div className="text-[10px] font-medium uppercase tracking-wide text-ink-light mb-0.5">
+                                          {wname}
+                                        </div>
+                                        <div className="font-medium text-ink wrap-break-word text-[13px] leading-snug line-clamp-3">
+                                          {tipLine.trim() || tr("点击配置", "Tap to configure", "Klikni za postavke")}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
                             </div>
                           </div>
 
@@ -3155,11 +3437,17 @@ function ConfigPageInner() {
                         <DialogHeader onClose={() => setSurfaceSlotModal(null)}>
                           <DialogTitle>
                             {surfaceSlotModal
-                              ? surfaceSlotModal.position === "top"
-                                ? tr("槽位 · 上区", "Slot · Top", "Slot · Gore")
-                                : surfaceSlotModal.position === "middle"
-                                ? tr("槽位 · 中区", "Slot · Middle", "Slot · Sredina")
-                                : tr("槽位 · 下区", "Slot · Bottom", "Slot · Dolje")
+                              ? surfaceSlotModal.kind === "grid"
+                                ? tr(
+                                    `槽位 · ${surfaceSlotModal.slotId}`,
+                                    `Slot · ${surfaceSlotModal.slotId}`,
+                                    `Slot · ${surfaceSlotModal.slotId}`,
+                                  )
+                                : surfaceSlotModal.position === "top"
+                                  ? tr("槽位 · 上区", "Slot · Top", "Slot · Gore")
+                                  : surfaceSlotModal.position === "middle"
+                                    ? tr("槽位 · 中区", "Slot · Middle", "Slot · Sredina")
+                                    : tr("槽位 · 下区", "Slot · Bottom", "Slot · Dolje")
                               : ""}
                           </DialogTitle>
                           <DialogDescription>
@@ -3224,6 +3512,16 @@ function ConfigPageInner() {
                         </div>
                       </DialogContent>
                     </Dialog>
+
+                    <SurfaceLayoutDialog
+                      open={surfaceLayoutDialogOpen}
+                      onClose={() => setSurfaceLayoutDialogOpen(false)}
+                      surfaceId={surfaceLayoutEditorId || ""}
+                      baseDefinition={layoutEditorSurfaceDefinition}
+                      catalogItems={catalogItems}
+                      tr={tr}
+                      onApply={applySurfaceLayoutFromDialog}
+                    />
                   </div>
 
                   <div ref={surfacePanelRef} className="min-w-0">
