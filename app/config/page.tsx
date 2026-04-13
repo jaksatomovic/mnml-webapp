@@ -42,6 +42,8 @@ import {
   Loader2,
   Plus,
   Trash2,
+  LayoutGrid,
+  PanelsTopLeft,
   Monitor,
   X,
   Users,
@@ -170,8 +172,8 @@ function normalizeTone(v: unknown): string {
 
 
 const TABS = [
-  { id: "modes", label: { zh: "模式", en: "Modes", hr: "Modovi" }, icon: Settings },
-  { id: "surfaces", label: { zh: "Surfaces", en: "Surfaces", hr: "Surfaces" }, icon: RefreshCw },
+  { id: "modes", label: { zh: "模式", en: "Modes", hr: "Modovi" }, icon: LayoutGrid },
+  { id: "surfaces", label: { zh: "Surfaces", en: "Surfaces", hr: "Surfaces" }, icon: PanelsTopLeft },
   { id: "preferences", label: { zh: "个性化", en: "Preferences", hr: "Postavke" }, icon: Sliders },
   { id: "api_keys", label: { zh: "API Keys", en: "API Keys", hr: "API ključevi" }, icon: KeyRound },
   { id: "sharing", label: { zh: "共享成员", en: "Sharing", hr: "Dijeljenje" }, icon: Users },
@@ -3490,32 +3492,40 @@ function ConfigPageInner() {
                                     {surface.tip}
                                   </div>
                                 </button>
-                                <div className="grid grid-cols-2 gap-px border-t border-ink/10 bg-ink/10 text-[10px]">
+                                <div
+                                  className={`grid shrink-0 border-t border-ink/10 h-9 ${
+                                    !isPresetSurfaceId(surface.id) ? "grid-cols-5" : "grid-cols-4"
+                                  }`}
+                                >
                                   <button
                                     type="button"
-                                    className="bg-white py-1.5 hover:bg-ink hover:text-white text-ink"
-                                    onClick={() =>
-                                      inPlaylist ? removeSurfaceFromPlaylist(surface.id) : addSurfaceToPlaylist(surface.id)
-                                    }
+                                    className="col-span-2 px-2 text-[11px] sm:text-xs text-ink hover:bg-ink hover:text-white transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
+                                    onClick={() => {
+                                      openSurfaceLayoutEditor(surface.id);
+                                      void fetchLiveSurfacePreview(surface.id);
+                                    }}
+                                    title={tr("预览", "Preview", "Pregled")}
                                   >
-                                    {inPlaylist
-                                      ? tr("从播放列表移除", "Remove from playlist", "Ukloni s playliste")
-                                      : tr("加入播放列表", "Add to playlist", "Dodaj na playlistu")}
+                                    <Eye size={14} />
                                   </button>
                                   <button
                                     type="button"
-                                    className="bg-white py-1.5 hover:bg-ink hover:text-white text-ink"
-                                    onClick={() => {
-                                      setAssignedSurface(surface.id);
-                                      showToast(tr("已设为默认 Surface", "Set as default surface", "Postavljeno kao zadano"), "success");
-                                    }}
+                                    className="col-span-2 px-2 text-[11px] sm:text-xs text-ink hover:bg-ink hover:text-white transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
+                                    onClick={() =>
+                                      inPlaylist ? removeSurfaceFromPlaylist(surface.id) : addSurfaceToPlaylist(surface.id)
+                                    }
+                                    title={
+                                      inPlaylist
+                                        ? tr("从播放列表移除", "Remove from playlist", "Ukloni s playliste")
+                                        : tr("加入播放列表", "Add to playlist", "Dodaj na playlistu")
+                                    }
                                   >
-                                    {tr("设为默认", "Set default", "Zadano")}
+                                    {inPlaylist ? "-" : "+"}
                                   </button>
                                   {!isPresetSurfaceId(surface.id) ? (
                                     <button
                                       type="button"
-                                      className="col-span-2 bg-white py-1.5 hover:bg-red-600 hover:text-white text-red-700"
+                                      className="px-2 text-[11px] sm:text-xs text-ink hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center"
                                       onClick={() => {
                                         if (!window.confirm(tr("删除该自定义 Surface？", "Delete this custom surface?", "Obrisati surface?"))) return;
                                         setSurfaceDrafts((prev) => {
@@ -3533,8 +3543,9 @@ function ConfigPageInner() {
                                         }
                                         showToast(tr("已删除", "Deleted", "Obrisano"), "success");
                                       }}
+                                      title={tr("删除自定义", "Delete custom", "Obriši")}
                                     >
-                                      {tr("删除自定义", "Delete custom", "Obriši")}
+                                      <Trash2 size={14} />
                                     </button>
                                   ) : null}
                                 </div>
