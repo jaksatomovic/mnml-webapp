@@ -4623,7 +4623,7 @@ function ConfigPageInner() {
             className="w-full bg-white text-ink border-ink/20 hover:bg-ink hover:text-white active:bg-ink active:text-white disabled:bg-white disabled:text-ink/50"
           >
             {saving ? <Loader2 size={14} className="animate-spin mr-1" /> : <Save size={14} className="mr-1" />}
-            {activeTab === "surface"
+            {activeTab === "surfaces"
               ? tr("保存 Surface", "Save Surface", "Spremi surface")
               : tr("保存到设备", "Save to Device", "Spremi na uređaj")}
           </Button>
