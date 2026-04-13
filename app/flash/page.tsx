@@ -458,7 +458,7 @@ export default function FlashPage() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-16">
       <div className="text-center mb-16">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-sm border border-ink/10 bg-paper-dark mb-5">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl border border-ink/10 bg-paper-dark mb-5">
           <Zap size={24} className="text-ink" />
         </div>
         <h1 className="font-serif text-3xl md:text-4xl font-bold text-ink mb-3">
@@ -482,7 +482,7 @@ export default function FlashPage() {
             {stepsLocalized.map((step, i) => (
               <div key={i} className="flex gap-4 group">
                 <div className="flex-shrink-0 flex items-start">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-sm border border-ink/10 bg-white group-hover:bg-ink group-hover:text-white transition-colors">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-xl border border-ink/10 bg-white group-hover:bg-ink group-hover:text-white transition-colors">
                     <step.icon size={18} />
                   </div>
                 </div>
@@ -503,7 +503,7 @@ export default function FlashPage() {
             ))}
           </div>
 
-          <div className="mt-8 p-4 rounded-sm border border-ink/10 bg-paper">
+          <div className="mt-8 p-4 rounded-xl border border-ink/10 bg-paper">
             <h3 className="text-sm font-semibold text-ink mb-2 flex items-center gap-2">
               <AlertCircle size={14} />
               {tr("注意事项", "Notes", "Napomene")}
@@ -536,7 +536,7 @@ export default function FlashPage() {
             {tr("固件烧录", "Firmware Flash", "Flashanje firmwarea")}
           </h2>
 
-          <div className="rounded-sm border border-ink/10 bg-white p-8 text-center">
+          <div className="rounded-xl border border-ink/10 bg-white p-8 text-center">
             <div className="mb-6">
               <div className="inline-flex items-center gap-2 text-sm text-ink-light mb-2">
                 <CheckCircle2 size={14} className={status === "success" ? "text-green-600" : status === "failed" ? "text-red-500" : status === "flashing" ? "text-amber-500 animate-pulse" : "text-ink-light"} />
@@ -579,7 +579,7 @@ export default function FlashPage() {
               {useManualFirmware ? (
                 <div>
                   <input
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm text-ink bg-white"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm text-ink bg-white"
                     placeholder="https://.../inksight-firmware-v1.2.3.bin"
                     value={manualFirmwareUrl}
                     onChange={(e) => {
@@ -614,7 +614,7 @@ export default function FlashPage() {
               ) : (
               <div className="flex gap-2">
                 <select
-                  className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm text-ink bg-white"
+                  className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm text-ink bg-white"
                   value={selectedReleaseKey}
                   onChange={(e) => setSelectedReleaseKey(e.target.value)}
                   disabled={!releases.length || useManualFirmware}
@@ -654,11 +654,11 @@ export default function FlashPage() {
             {/* Flash button */}
             <div className="mb-6">
               {authState === "checking" ? (
-                <div className="mb-3 p-3 rounded-sm border border-ink/10 bg-paper text-sm text-ink-light">
+                <div className="mb-3 p-3 rounded-xl border border-ink/10 bg-paper text-sm text-ink-light">
                   {tr("正在检查登录状态...", "Checking auth status...", "Provjeravam status prijave...")}
                 </div>
               ) : authState === "guest" && !skipLoginGate ? (
-                <div className="mb-3 p-3 rounded-sm border border-amber-200 bg-amber-50 text-left">
+                <div className="mb-3 p-3 rounded-xl border border-amber-200 bg-amber-50 text-left">
                   <p className="text-sm text-amber-800">{tr("建议先登录，再开始刷机", "Sign in first for a smoother flow", "Preporučujemo prijavu prije početka flashanja")}</p>
                   <p className="mt-1 text-xs text-amber-700">
                     {tr("登录后可更顺畅完成 刷机 -&gt; 配网 -&gt; 在线配置。", "After sign in: flash -> provisioning -> online configuration.", "Nakon prijave tijek je jednostavniji: flashanje -> provisioning -> online konfiguracija.")}
@@ -685,13 +685,13 @@ export default function FlashPage() {
                   </div>
                 </div>
               ) : authState === "logged_in" ? (
-                <div className="mb-3 p-3 rounded-sm border border-green-200 bg-green-50 text-sm text-green-700">
+                <div className="mb-3 p-3 rounded-xl border border-green-200 bg-green-50 text-sm text-green-700">
                   {tr("已登录，可直接完成刷机后的在线配置流程。", "Signed in. You can continue to online config after flashing.", "Prijavljen si. Nakon flashanja možeš odmah nastaviti na online konfiguraciju.")}
                 </div>
               ) : null}
 
               {serialSupported === false ? (
-                <div className="p-4 rounded-sm border border-red-200 bg-red-50 text-sm text-red-700">
+                <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
                   <AlertCircle size={16} className="inline mr-2 align-text-bottom" />
                   {tr("你的浏览器不支持 WebSerial API，请使用 Chrome 或 Edge 浏览器。", "Your browser does not support WebSerial API. Please use Chrome or Edge.", "Tvoj preglednik ne podržava WebSerial API. Koristi Chrome ili Edge.")}
                 </div>
@@ -727,7 +727,7 @@ export default function FlashPage() {
 
             {/* Post-flash info */}
             {status === "success" ? (
-              <div className="mt-4 rounded-sm border border-green-200 bg-green-50 p-5 text-left">
+              <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-5 text-left">
                 <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
                   <CheckCircle2 size={16} />
                   {tr("刷写成功 — 下一步配网", "Flashed Successfully - Next: Provisioning", "Flashanje uspješno — sljedeće: provisioning")}
@@ -757,7 +757,7 @@ export default function FlashPage() {
               <Terminal size={14} />
               {tr("控制台日志", "Console Logs", "Konzolni logovi")}
             </h3>
-            <div className="ink-strong-select rounded-sm border border-ink/10 bg-ink text-green-400 font-mono text-xs p-4 h-48 overflow-y-auto">
+            <div className="ink-strong-select rounded-xl border border-ink/10 bg-ink text-green-400 font-mono text-xs p-4 h-48 overflow-y-auto">
               {logs.map((log, i) => (
                 <div key={i} className="py-0.5 leading-relaxed">
                   {log}
@@ -774,7 +774,7 @@ export default function FlashPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPostFlashGuide(false)} />
           <div className="relative z-10 w-full max-w-md mx-4 animate-fade-in">
-            <div className="rounded-sm border border-ink/10 bg-white p-6 shadow-lg">
+            <div className="rounded-xl border border-ink/10 bg-white p-6 shadow-lg">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={20} className="text-green-600" />

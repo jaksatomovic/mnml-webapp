@@ -355,7 +355,13 @@ export function buildLayoutFromSlots(
   }
   const ordered = sortSurfaceSlotsReadingOrder(slots);
   return ordered.map((s, i) => {
-    const m = String(s.mode_id || s.mode || "STOIC").toUpperCase();
+    const raw = String(s.mode_id || s.mode || "").trim();
+    if (!raw) {
+      const blk: Record<string, unknown> = { mode: "", position: `slot_${i}` };
+      if (s.id) blk.slot_id = s.id;
+      return blk;
+    }
+    const m = raw.toUpperCase();
     const blk: Record<string, unknown> = { mode: m, position: `slot_${i}` };
     if (s.id) blk.slot_id = s.id;
     const sid = String(s.id || "");
@@ -388,6 +394,79 @@ export function spanForSlotType(slotType: string, columns: number, rows: number)
  * Find top-left (x,y) for a w×h rectangle that does not overlap existing slots.
  * Optionally try `prefer` first (e.g. user input).
  */
+function rectOverlaps(a: SurfaceGridSlot, b: SurfaceGridSlot): boolean {
+  const ax = asInt(a.x, 0);
+  const ay = asInt(a.y, 0);
+  const aw = asInt(a.w, 0);
+  const ah = asInt(a.h, 0);
+  const bx = asInt(b.x, 0);
+  const by = asInt(b.y, 0);
+  const bw = asInt(b.w, 0);
+  const bh = asInt(b.h, 0);
+  return !(ax + aw <= bx || bx + bw <= ax || ay + ah <= by || by + bh <= ay);
+}
+
+/**
+ * Move one slot to (newX,newY). If that overlaps others, try to push each overlapped slot
+ * to the first valid rectangle (same size), in reading order. Returns null if impossible.
+ */
+export function tryMoveWithDisplacement(
+  slots: SurfaceGridSlot[],
+  moveIndex: number,
+  newX: number,
+  newY: number,
+  columns: number,
+  rows: number,
+): SurfaceGridSlot[] | null {
+  const cols = Math.max(1, columns);
+  const rs = Math.max(1, rows);
+  if (moveIndex < 0 || moveIndex >= slots.length) return null;
+
+  const next = slots.map((s) => ({ ...s }));
+  const moved = { ...next[moveIndex] };
+  const w = asInt(moved.w, 0);
+  const h = asInt(moved.h, 0);
+  const nx = Math.trunc(newX);
+  const ny = Math.trunc(newY);
+  if (w < 1 || h < 1 || nx < 0 || ny < 0 || nx + w > cols || ny + h > rs) return null;
+
+  moved.x = nx;
+  moved.y = ny;
+  moved.slot_type = deriveExpectedSlotType(w, h, cols, rs);
+  next[moveIndex] = moved;
+
+  const mover = next[moveIndex];
+  const conflictIndices: number[] = [];
+  for (let j = 0; j < next.length; j++) {
+    if (j === moveIndex) continue;
+    if (rectOverlaps(mover, next[j])) conflictIndices.push(j);
+  }
+  conflictIndices.sort((a, b) => {
+    const ya = asInt(next[a].y, 0);
+    const yb = asInt(next[b].y, 0);
+    if (ya !== yb) return ya - yb;
+    return asInt(next[a].x, 0) - asInt(next[b].x, 0);
+  });
+
+  for (const j of conflictIndices) {
+    const s = next[j];
+    const dw = asInt(s.w, 0);
+    const dh = asInt(s.h, 0);
+    if (dw < 1 || dh < 1) return null;
+    const pos = findValidPosition(next, j, cols, rs, dw, dh);
+    if (!pos) return null;
+    next[j] = {
+      ...s,
+      x: pos.x,
+      y: pos.y,
+      slot_type: deriveExpectedSlotType(dw, dh, cols, rs),
+    };
+  }
+
+  if (!validateSurfaceSlots(next, cols, rs).ok) return null;
+  return next;
+}
+
 export function findValidPosition(
   slots: SurfaceGridSlot[],
   excludeIndex: number,
@@ -420,10 +499,8 @@ export function findValidPosition(
 
 export const SURFACE_SLOT_TYPES = ["SMALL", "WIDE", "TALL", "LARGE", "FULL", "CUSTOM"] as const;
 
-const DEFAULT_SLOT_MODE = "STOIC";
-
 /**
- * When editing layout only, carry over mode_id from existing surface slots by id; new slots get default.
+ * When editing layout only, carry over mode_id from existing surface slots by id; new slots stay empty until assigned.
  */
 export function mergeSlotModesFromBase(
   slots: SurfaceGridSlot[],
@@ -433,12 +510,16 @@ export function mergeSlotModesFromBase(
   const modeById = new Map<string, string>();
   for (const s of prev) {
     const id = String(s.id ?? "").trim();
-    if (id) modeById.set(id, String(s.mode_id || s.mode || DEFAULT_SLOT_MODE).toUpperCase());
+    if (id) modeById.set(id, String(s.mode_id || s.mode || "").trim().toUpperCase());
   }
   return slots.map((s) => {
     const id = String(s.id ?? "").trim();
-    const fromPrev = id ? modeById.get(id) : undefined;
-    const mode_id = (fromPrev || String(s.mode_id || s.mode || DEFAULT_SLOT_MODE)).toUpperCase();
+    let mode_id: string;
+    if (id && modeById.has(id)) {
+      mode_id = modeById.get(id)!;
+    } else {
+      mode_id = String(s.mode_id || s.mode || "").trim().toUpperCase();
+    }
     return { ...s, mode_id };
   });
 }

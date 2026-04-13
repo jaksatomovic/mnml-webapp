@@ -50,7 +50,7 @@ export default async function RootLayout({
     <html lang={lang}>
       <body className={`${inter.variable} ${notoSerifSc.variable} antialiased`}>
         <Navbar />
-        <main className="min-h-screen">{children}</main>
+        <main className="min-h-screen pb-px">{children}</main>
         <Footer />
       </body>
     </html>

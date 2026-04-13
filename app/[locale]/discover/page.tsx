@@ -715,7 +715,7 @@ export default function DiscoverPage() {
                 placeholder={tr("搜索模式、作者或描述...", "Search modes, authors, or descriptions...", "Pretraži modove, autore ili opise...")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-300 rounded-sm text-ink placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
+                className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-300 rounded-xl text-ink placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
               />
             </div>
           </div>
@@ -730,7 +730,7 @@ export default function DiscoverPage() {
                   className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                     selectedCategory === category.value
                       ? "bg-ink text-white shadow-[2px_2px_0_0_#000000]"
-                      : "bg-white text-ink hover:bg-gray-50 border border-gray-300 hover:border-black hover:shadow-[2px_2px_0_0_#000000]"
+                      : "bg-white text-ink hover:bg-gray-50/80 border border-gray-200 hover:border-ink/25 hover:shadow-md"
                   }`}
                 >
                   {pickByLocale(locale, { zh: category.zh, en: category.en, hr: category.hr })}
@@ -742,7 +742,7 @@ export default function DiscoverPage() {
               <select
                 value={installTargetMac}
                 onChange={(e) => setInstallTargetMac(e.target.value)}
-                className="px-2 py-1 text-sm bg-white border border-gray-300 rounded-sm text-ink"
+                className="px-2 py-1 text-sm bg-white border border-gray-300 rounded-xl text-ink"
               >
                 <option value="">{tr("选择设备", "Select device", "Odaberi uređaj")}</option>
                 {devices.map((device) => (
@@ -775,7 +775,7 @@ export default function DiscoverPage() {
       {/* Mode grid */}
       <section className="mx-auto max-w-6xl px-6 py-12 md:py-16">
         {installTargetMac && (
-          <div className="mb-8 border border-gray-200 rounded-sm p-4">
+          <div className="mb-8 border border-gray-200 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-semibold text-ink">{tr("我的插件", "My Plugins", "Moji Plugini")}</h2>
               <span className="text-xs text-ink-light">{tr("当前设备", "Current device", "Trenutni uređaj")}: {installTargetMac}</span>
@@ -783,7 +783,7 @@ export default function DiscoverPage() {
             {installedPlugins.length > 0 ? (
               <div className="space-y-2">
                 {installedPlugins.map((plugin) => (
-                  <div key={plugin.plugin_id} className="flex items-center justify-between border border-gray-200 rounded-sm px-3 py-2">
+                  <div key={plugin.plugin_id} className="flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2">
                     <div>
                       <div className="text-sm font-medium text-ink">
                         {plugin.manifest?.name || plugin.plugin_id}
@@ -797,7 +797,7 @@ export default function DiscoverPage() {
                           return (
                             <>
                               <span
-                                className={`px-1.5 py-0.5 rounded-sm text-[10px] border ${
+                                className={`px-1.5 py-0.5 rounded-xl text-[10px] border ${
                                   sec.signed
                                     ? "border-gray-300 text-ink bg-white"
                                     : "border-gray-200 text-ink-light bg-gray-50"
@@ -808,7 +808,7 @@ export default function DiscoverPage() {
                                   : tr("未签名", "Unsigned", "Bez potpisa")}
                               </span>
                               <span
-                                className={`px-1.5 py-0.5 rounded-sm text-[10px] border ${
+                                className={`px-1.5 py-0.5 rounded-xl text-[10px] border ${
                                   sec.restricted
                                     ? "border-gray-300 text-ink bg-white"
                                     : "border-gray-200 text-ink-light bg-gray-50"
@@ -835,7 +835,7 @@ export default function DiscoverPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-ink-light border border-dashed border-gray-300 rounded-sm px-3 py-3">
+              <div className="text-sm text-ink-light border border-dashed border-gray-300 rounded-xl px-3 py-3">
                 {tr("此设备暂时没有已安装插件。", "No plugins installed on this device yet.", "Na ovom uređaju još nema instaliranih plugina.")}
               </div>
             )}
@@ -878,7 +878,7 @@ export default function DiscoverPage() {
               return (
                 <Card
                   key={mode.id}
-                  className="group border border-gray-200 hover:border-black hover:shadow-[4px_4px_0_0_#000000] transition-all duration-200 flex flex-col"
+                  className="group border border-gray-200/90 rounded-2xl overflow-hidden bg-white/90 hover:border-ink/20 hover:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18)] transition-all duration-300 ease-out flex flex-col"
                 >
                   <CardContent className="pt-8 px-6 pb-6 flex flex-col flex-1">
                     {/* Card header: name, author, and category */}
@@ -890,7 +890,7 @@ export default function DiscoverPage() {
                           </h3>
                           <p className="text-sm text-ink-light">{mode.author}</p>
                         </div>
-                        <span className="px-2.5 py-1 text-xs font-medium text-ink bg-paper-dark rounded-sm whitespace-nowrap ml-3">
+                        <span className="px-2.5 py-1 text-xs font-medium text-ink bg-paper-dark rounded-xl whitespace-nowrap ml-3">
                           {pickByLocale(locale, {
                             en: categoryOptions.find((category) => category.value === mode.category)?.en || mode.category,
                             hr: categoryOptions.find((category) => category.value === mode.category)?.hr || mode.category,
@@ -901,7 +901,7 @@ export default function DiscoverPage() {
                     </div>
 
                     {/* Thumbnail */}
-                    <div className="w-full aspect-4/3 mb-4 border border-gray-300 bg-white rounded-sm overflow-hidden relative">
+                    <div className="w-full aspect-4/3 mb-4 border border-gray-300 bg-white rounded-xl overflow-hidden relative">
                       {mode.thumbnail_url ? (
                         <Image
                           src={mode.thumbnail_url}
@@ -911,7 +911,7 @@ export default function DiscoverPage() {
                           unoptimized
                         />
                       ) : (
-                        <div className="w-full h-full border border-dashed border-gray-300 bg-white rounded-sm flex items-center justify-center flex-col">
+                        <div className="w-full h-full border border-dashed border-gray-300 bg-white rounded-xl flex items-center justify-center flex-col">
                           <ImageIcon size={32} className="text-gray-400 mb-2" />
                           <span className="text-xs text-gray-400">{tr("缩略图占位", "Thumbnail placeholder", "Mjesto za thumbnail")}</span>
                         </div>
@@ -979,12 +979,12 @@ export default function DiscoverPage() {
                 {tr("选择设备", "Select Device", "Odaberi Uređaj")} <span className="text-red-500">*</span>
               </label>
               {isLoadingDevices ? (
-                <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm flex items-center justify-center">
+                <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl flex items-center justify-center">
                   <Loader2 size={16} className="text-ink-light animate-spin" />
                   <span className="ml-2 text-sm text-ink-light">{tr("加载中...", "Loading...", "Učitavanje...")}</span>
                 </div>
               ) : devices.length === 0 ? (
-                <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink-light text-sm">
+                <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-ink-light text-sm">
                   {tr("暂无设备，请先绑定设备", "No devices yet. Please bind a device first.", "Još nema uređaja. Najprije poveži uređaj.")}
                 </div>
               ) : (
@@ -993,7 +993,7 @@ export default function DiscoverPage() {
                   onChange={(e) => {
                     setPublishForm({ ...publishForm, mac: e.target.value, source_custom_mode_id: "" });
                   }}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink focus:outline-none focus:border-black transition-colors"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-ink focus:outline-none focus:border-black transition-colors"
                 >
                   <option value="">{tr("请选择设备", "Choose a device", "Odaberi uređaj")}</option>
                   {devices.map((device) => (
@@ -1011,12 +1011,12 @@ export default function DiscoverPage() {
                 {tr("选择模式", "Select Mode", "Odaberi Mod")} <span className="text-red-500">*</span>
               </label>
               {isLoadingCustomModes ? (
-                <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm flex items-center justify-center">
+                <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl flex items-center justify-center">
                   <Loader2 size={16} className="text-ink-light animate-spin" />
                   <span className="ml-2 text-sm text-ink-light">{tr("加载中...", "Loading...", "Učitavanje...")}</span>
                 </div>
               ) : customModes.length === 0 ? (
-                <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink-light text-sm">
+                <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-ink-light text-sm">
                   {tr("暂无自定义模式，请先创建自定义模式", "No custom modes yet. Please create one first.", "Još nema prilagođenih modova. Najprije kreiraj jedan.")}
                 </div>
               ) : (
@@ -1033,7 +1033,7 @@ export default function DiscoverPage() {
                       description: selectedMode?.description || publishForm.description,
                     });
                   }}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink focus:outline-none focus:border-black transition-colors"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-ink focus:outline-none focus:border-black transition-colors"
                 >
                   <option value="">{tr("请选择要分享的模式", "Choose a mode to share", "Odaberi mod za dijeljenje")}</option>
                   {customModes.map((mode) => (
@@ -1066,7 +1066,7 @@ export default function DiscoverPage() {
                   setPublishForm({ ...publishForm, name: e.target.value })
                 }
                 placeholder={tr("为你的模式起个名字", "Give your mode a memorable name", "Daj modu ime koje se pamti")}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-ink placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
               />
             </div>
 
@@ -1082,7 +1082,7 @@ export default function DiscoverPage() {
                 }
                 placeholder={tr("描述这个模式的特色和用途...", "Describe what this mode is for and what makes it special...", "Opiši čemu mod služi i što ga čini posebnim...")}
                 rows={4}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors font-serif leading-relaxed resize-none"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-ink placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors font-serif leading-relaxed resize-none"
               />
             </div>
 
@@ -1096,7 +1096,7 @@ export default function DiscoverPage() {
                 onChange={(e) =>
                   setPublishForm({ ...publishForm, category: e.target.value })
                 }
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink focus:outline-none focus:border-black transition-colors"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-ink focus:outline-none focus:border-black transition-colors"
               >
                 <option value="">{tr("请选择分类", "Choose a category", "Odaberi kategoriju")}</option>
                 {publishCategoryOptions.map((cat) => (
@@ -1167,7 +1167,7 @@ export default function DiscoverPage() {
               <select
                 value={uploadForm.mac}
                 onChange={(e) => setUploadForm((prev) => ({ ...prev, mac: e.target.value }))}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink focus:outline-none focus:border-black transition-colors"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-ink focus:outline-none focus:border-black transition-colors"
               >
                 <option value="">{tr("请选择设备", "Choose a device", "Odaberi uređaj")}</option>
                 {devices.map((device) => (
@@ -1238,12 +1238,12 @@ export default function DiscoverPage() {
 
           <div className="space-y-4">
             {isLoadingDevices ? (
-              <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm flex items-center justify-center">
+              <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl flex items-center justify-center">
                 <Loader2 size={16} className="text-ink-light animate-spin" />
                 <span className="ml-2 text-sm text-ink-light">{tr("加载中...", "Loading...", "Učitavanje...")}</span>
               </div>
             ) : devices.length === 0 ? (
-              <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-ink-light text-sm">
+              <div className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-ink-light text-sm">
                 {tr("暂无设备，请先绑定设备", "No devices yet. Please bind a device first.", "Još nema uređaja. Najprije poveži uređaj.")}
               </div>
             ) : (
@@ -1256,7 +1256,7 @@ export default function DiscoverPage() {
                         handleInstall(installDeviceModal.modeId, device.mac);
                       }
                     }}
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-sm text-left hover:border-black hover:shadow-[2px_2px_0_0_#000000] transition-all"
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-left hover:border-ink/25 hover:shadow-md transition-all duration-200"
                   >
                     <div className="font-medium text-ink">{device.nickname || device.mac}</div>
                     <div className="text-sm text-ink-light mt-1">{device.mac}</div>
@@ -1281,7 +1281,7 @@ export default function DiscoverPage() {
 
       {/* Toast */}
       {showToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-ink text-white px-4 py-3 rounded-sm shadow-[4px_4px_0_0_#000000] animate-fade-in">
+        <div className="fixed bottom-6 right-6 z-50 bg-ink/95 text-white px-4 py-3 rounded-2xl shadow-[0_8px_32px_-4px_rgba(0,0,0,0.35)] backdrop-blur-sm animate-fade-in">
           <p className="text-sm">{toastMessage}</p>
         </div>
       )}

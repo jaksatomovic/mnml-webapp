@@ -33,13 +33,13 @@ export function Dialog({ open, onClose, children, maxWidthClassName = "max-w-lg"
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="fixed inset-0 bg-black/20" />
-      <div className={`relative z-10 w-full mx-4 animate-fade-in ${maxWidthClassName}`}>
+      <div className="fixed inset-0 bg-black/25 backdrop-blur-[2px]" />
+      <div className={`relative z-10 w-full animate-fade-in ${maxWidthClassName}`}>
         {children}
       </div>
     </div>
@@ -55,7 +55,7 @@ export function DialogContent({
 }) {
   return (
     <div
-      className={`rounded-sm border border-gray-300 bg-white p-6 shadow-[4px_4px_0_0_#000000] ${className}`}
+      className={`rounded-2xl border border-ink/10 bg-white/95 p-6 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04)] backdrop-blur-md ${className}`}
     >
       {children}
     </div>
@@ -70,14 +70,16 @@ export function DialogHeader({
   onClose?: () => void;
 }) {
   return (
-    <div className="flex items-start justify-between mb-4">
-      <div className="flex-1">{children}</div>
+    <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="flex-1 min-w-0">{children}</div>
       {onClose && (
         <button
+          type="button"
           onClick={onClose}
-          className="ml-4 p-1 text-ink-light hover:text-ink transition-colors"
+          className="shrink-0 rounded-full p-1.5 text-ink-light hover:text-ink hover:bg-ink/5 transition-colors"
+          aria-label="Close"
         >
-          <X size={18} />
+          <X size={18} strokeWidth={1.75} />
         </button>
       )}
     </div>
@@ -86,12 +88,12 @@ export function DialogHeader({
 
 export function DialogTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="text-lg font-semibold text-ink">{children}</h2>
+    <h2 className="text-lg font-semibold tracking-tight text-ink">{children}</h2>
   );
 }
 
 export function DialogDescription({ children }: { children: ReactNode }) {
   return (
-    <p className="text-sm text-ink-light mt-1">{children}</p>
+    <p className="text-sm text-ink-light mt-1.5 leading-relaxed">{children}</p>
   );
 }

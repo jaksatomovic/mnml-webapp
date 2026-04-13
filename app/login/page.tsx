@@ -228,7 +228,7 @@ function LoginForm() {
                     maxLength={30}
                     autoComplete="username"
                     placeholder={tr("用于显示的昵称（非手机号/邮箱）", "Choose a display name", "Odaberite ime za prikaz")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -240,7 +240,7 @@ function LoginForm() {
                     required
                     minLength={4}
                     autoComplete={mode === "login" ? "current-password" : "new-password"}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                   />
                 </div>
               </>
@@ -258,7 +258,7 @@ function LoginForm() {
                     required
                     autoComplete="email"
                     placeholder={tr("必填，用于找回账号", "Required, used for account recovery", "Obavezno, koristi se za oporavak računa")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -270,7 +270,7 @@ function LoginForm() {
                     <select
                       value={phoneRegion}
                       onChange={(e) => setPhoneRegion(e.target.value as (typeof PHONE_REGION_OPTIONS)[number]["region"])}
-                      className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                      className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                     >
                       {PHONE_REGION_OPTIONS.map((option) => (
                         <option key={`${option.region}-${option.code}`} value={option.region}>
@@ -284,7 +284,7 @@ function LoginForm() {
                       onChange={(e) => setPhone(e.target.value)}
                       autoComplete="tel"
                       placeholder={tr("本地手机号", "Local phone number", "Lokalni broj telefona")}
-                      className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                      className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                     />
                   </div>
                 </div>
@@ -304,7 +304,7 @@ function LoginForm() {
                     autoComplete="email"
                     disabled={resetStep === "verify"}
                     placeholder={tr("输入注册时使用的邮箱", "Enter your registered email", "Unesite email s kojim ste se registrirali")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm disabled:opacity-50"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm disabled:opacity-50"
                   />
                 </div>
                 {resetStep === "verify" && (
@@ -320,13 +320,13 @@ function LoginForm() {
                           onChange={(e) => setVerifyCode(e.target.value)}
                           maxLength={6}
                           placeholder="000000"
-                          className="flex-1 rounded-sm border border-ink/20 px-3 py-2 text-sm tracking-widest"
+                          className="flex-1 rounded-xl border border-ink/20 px-3 py-2 text-sm tracking-widest"
                         />
                         <button
                           type="button"
                           disabled={cooldown > 0 || loading}
                           onClick={handleResetSendCode}
-                          className="shrink-0 rounded-sm border border-ink/20 px-3 py-2 text-xs disabled:opacity-50"
+                          className="shrink-0 rounded-xl border border-ink/20 px-3 py-2 text-xs disabled:opacity-50"
                         >
                           {cooldown > 0
                             ? `${cooldown}s`
@@ -344,7 +344,7 @@ function LoginForm() {
                         onChange={(e) => setPassword(e.target.value)}
                         minLength={4}
                         autoComplete="new-password"
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                       />
                     </div>
                   </>

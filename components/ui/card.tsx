@@ -1,11 +1,14 @@
 import { HTMLAttributes, forwardRef } from "react";
 
+const cardShell =
+  "rounded-2xl border border-ink/8 bg-white/90 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_12px_-4px_rgba(0,0,0,0.06)] backdrop-blur-sm";
+
 const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className = "", ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={`rounded-sm border border-ink/10 bg-white shadow-sm ${className}`}
+        className={`${cardShell} ${className}`}
         {...props}
       />
     );

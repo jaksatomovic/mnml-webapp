@@ -93,7 +93,7 @@ export function ModeSelector({
                 setCustomDesc("");
                 setCustomModeName("");
               }}
-              className="rounded-sm border border-dashed border-ink/20 bg-white px-3 py-2 h-[118px] flex flex-col items-center justify-center text-ink-light hover:border-ink/40 hover:bg-paper-dark transition-colors"
+              className="rounded-xl border border-dashed border-ink/20 bg-white px-3 py-2 h-[118px] flex flex-col items-center justify-center text-ink-light hover:border-ink/40 hover:bg-paper-dark transition-colors"
               title={tr("新建自定义模式", "Create custom mode", "Izradi prilagođeni mod")}
             >
               <Plus size={18} className="mb-1" />
@@ -133,7 +133,7 @@ function ModeGrid({
 
   return (
     <div className="mb-6">
-      <div className="flex items-center justify-between gap-2 mb-3 rounded-sm bg-paper-dark border border-ink/10 px-3 py-2">
+      <div className="flex items-center justify-between gap-2 mb-3 rounded-xl bg-paper-dark border border-ink/10 px-3 py-2">
         <h4 className="text-base font-semibold text-ink">{title}</h4>
         <button
           onClick={() => setCollapsed((v) => !v)}
@@ -153,7 +153,7 @@ function ModeGrid({
             return (
               <div
                 key={mode}
-                className="flex h-[118px] flex-col rounded-sm border border-ink/10 bg-white overflow-hidden"
+                className="flex h-[118px] flex-col rounded-xl border border-ink/10 bg-white overflow-hidden"
               >
                 <button
                   type="button"

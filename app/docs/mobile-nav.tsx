@@ -44,7 +44,7 @@ export function DocsMobileNav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border border-ink/10 rounded-sm">
+    <div className="border border-ink/10 rounded-xl">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-ink"

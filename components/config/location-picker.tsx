@@ -144,10 +144,10 @@ export function LocationPicker({
             onChange({ city: nextQuery.trim() });
           }}
           placeholder={placeholder}
-          className={className || "w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"}
+          className={className || "w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"}
         />
         {open && (query.trim() || recentOptions.length > 0) ? (
-          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-sm border border-ink/15 bg-white shadow-lg">
+          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-ink/15 bg-white shadow-lg">
             {loading ? (
               <div className="px-3 py-2 text-xs text-ink-light">
                 {pickByLocale(locale, {

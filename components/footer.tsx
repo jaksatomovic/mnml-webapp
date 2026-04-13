@@ -15,13 +15,13 @@ export function Footer() {
     hr: "Objavljeno pod MIT licencom.",
   });
   return (
-    <footer className="border-t border-ink/10 bg-paper">
+    <footer className="border-t border-ink/[0.08] bg-linear-to-b from-[#fafafa] to-[#f0f0f2]">
       <div className="mx-auto max-w-6xl px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-ink bg-ink text-white text-xs font-bold font-serif">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-ink/20 bg-ink text-white text-xs font-bold font-serif shadow-sm">
                 {brandGlyph}
               </div>
               <span className="text-base font-semibold text-ink tracking-tight">
@@ -82,7 +82,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-ink/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-10 pt-6 border-t border-ink/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-ink-light">
             &copy; {new Date().getFullYear()} {brandName}. {licenseText}
           </p>

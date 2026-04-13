@@ -358,7 +358,7 @@ export default function ProfilePage() {
       <div className="mx-auto max-w-4xl px-6 py-10">
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-start gap-2 p-3 rounded-sm border border-amber-200 bg-amber-50 text-sm text-amber-800">
+            <div className="flex items-start gap-2 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-800">
               <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
               <div>
                 <p className="font-medium">{tr("请先登录", "Please sign in first")}</p>
@@ -410,7 +410,7 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="md:col-span-2">
-                  <div className="flex items-start gap-2 p-3 rounded-sm border border-amber-200 bg-amber-50 text-sm text-amber-800 mb-3">
+                  <div className="flex items-start gap-2 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-800 mb-3">
                     <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
                     <span>{tr("尚未绑定邮箱，绑定后可用于找回密码", "No email bound. Bind one for password recovery.", "Email još nije povezan. Poveži ga za oporavak lozinke.")}</span>
                   </div>
@@ -421,7 +421,7 @@ export default function ProfilePage() {
                       onChange={(e) => setBindEmail(e.target.value)}
                       disabled={bindStep === "code_sent"}
                       placeholder={tr("输入邮箱地址", "Email", "Email")}
-                      className="w-52 rounded-sm border border-ink/20 px-3 py-2 text-sm disabled:opacity-50"
+                      className="w-52 rounded-xl border border-ink/20 px-3 py-2 text-sm disabled:opacity-50"
                     />
                     <input
                       type="text"
@@ -430,7 +430,7 @@ export default function ProfilePage() {
                       disabled={bindStep === "idle"}
                       maxLength={6}
                       placeholder={tr("验证码", "Code", "Kod")}
-                      className="w-24 rounded-sm border border-ink/20 px-3 py-2 text-sm tracking-widest disabled:opacity-40"
+                      className="w-24 rounded-xl border border-ink/20 px-3 py-2 text-sm tracking-widest disabled:opacity-40"
                     />
                     {bindStep === "idle" ? (
                       <Button
@@ -501,7 +501,7 @@ export default function ProfilePage() {
             {/* Platform-managed quota mode */}
             {quotaMode === "platform" && (
               <div className="space-y-4">
-                <div className="p-6 rounded-sm border border-ink/20 bg-paper text-center">
+                <div className="p-6 rounded-xl border border-ink/20 bg-paper text-center">
                   <p className="text-sm text-ink-light mb-2">{tr("当前剩余免费额度", "Remaining Free Quota", "Preostala besplatna kvota")}</p>
                   <p className="text-5xl font-bold text-ink">{profileData?.free_quota_remaining || 0}</p>
                   <p className="text-xs text-ink-light mt-2">{tr("次", "times", "puta")}</p>
@@ -514,7 +514,7 @@ export default function ProfilePage() {
                         value={inviteCode}
                         onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                         placeholder={tr("请输入邀请码", "Enter invitation code", "Unesi kod pozivnice")}
-                        className="flex-1 rounded-sm border border-ink/20 px-3 py-2 text-sm font-mono uppercase"
+                        className="flex-1 rounded-xl border border-ink/20 px-3 py-2 text-sm font-mono uppercase"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !redeeming) {
                             handleRedeemInviteCode();
@@ -540,7 +540,7 @@ export default function ProfilePage() {
             {/* Custom key mode */}
             {quotaMode === "custom" && (
               <div className="space-y-4">
-                <div className="p-3 rounded-sm border border-ink/20 bg-paper-dark">
+                <div className="p-3 rounded-xl border border-ink/20 bg-paper-dark">
                   <p className="text-xs text-ink-light">
                     {tr(
                       "💡 在此模式下，设备渲染将不消耗平台的免费额度，使用您自己的 API Key 进行调用。",
@@ -626,7 +626,7 @@ export default function ProfilePage() {
                       <select
                         value={llmProvider}
                         onChange={(e) => setLlmProvider(e.target.value)}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       >
                         <option value="aliyun">{tr("阿里百炼", "Alibaba Bailian", "Alibaba Bailian")}</option>
                         <option value="deepseek">DeepSeek</option>
@@ -636,7 +636,7 @@ export default function ProfilePage() {
                       <select
                         value={llmModel}
                         onChange={(e) => setLlmModel(e.target.value)}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       >
                         {llmProvider === "aliyun" ? (
                           <>
@@ -658,7 +658,7 @@ export default function ProfilePage() {
                         value={llmApiKey}
                         onChange={(e) => setLlmApiKey(e.target.value)}
                         placeholder={tr("请输入您的 API Key", "Enter your API Key", "Unesi svoj API ključ")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
                         autoComplete="off"
                       />
                     </Field>
@@ -672,7 +672,7 @@ export default function ProfilePage() {
                         type="text"
                         value={tr("阿里百炼", "Alibaba Bailian", "Alibaba Bailian")}
                         disabled
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-ink/5 text-ink-light"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-ink/5 text-ink-light"
                       />
                     </Field>
                     <Field label={tr("图像模型名称", "Image Model Name", "Naziv modela za slike")}>
@@ -683,7 +683,7 @@ export default function ProfilePage() {
                           <select
                             value={imageModel}
                             onChange={(e) => setImageModel(e.target.value)}
-                            className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                            className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                           >
                             <option value="">{tr("请选择图像模型", "Select image model", "Odaberi model za slike")}</option>
                             {showSaved && <option value={imageModel}>{imageModel}</option>}
@@ -698,7 +698,7 @@ export default function ProfilePage() {
                         value={imageApiKey}
                         onChange={(e) => setImageApiKey(e.target.value)}
                         placeholder={tr("（可选）留空则图像生成功能不可用", "(Optional) Leave empty to disable image generation", "(Opcionalno) Ostavi prazno za isključivanje generiranja slika")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
                         autoComplete="off"
                       />
                     </Field>
@@ -713,7 +713,7 @@ export default function ProfilePage() {
                         value={llmBaseUrl}
                         onChange={(e) => setLlmBaseUrl(e.target.value)}
                         placeholder={tr("例如：https://api.deepseek.com/v1", "e.g. https://api.deepseek.com/v1", "npr. https://api.deepseek.com/v1")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
                       />
                     </Field>
                     <Field label={tr("模型名称", "Model Name", "Naziv modela")}>
@@ -722,7 +722,7 @@ export default function ProfilePage() {
                         value={llmModel}
                         onChange={(e) => setLlmModel(e.target.value)}
                         placeholder={tr("例如：deepseek-chat", "e.g. deepseek-chat", "npr. deepseek-chat")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
                       />
                     </Field>
                     <Field label={tr("API Key", "API Key", "API ključ")}>
@@ -731,7 +731,7 @@ export default function ProfilePage() {
                         value={llmApiKey}
                         onChange={(e) => setLlmApiKey(e.target.value)}
                         placeholder={tr("请输入您的 API Key", "Enter your API Key", "Unesi svoj API ključ")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
                         autoComplete="off"
                       />
                     </Field>
@@ -747,7 +747,7 @@ export default function ProfilePage() {
                         value={imageBaseUrl}
                         onChange={(e) => setImageBaseUrl(e.target.value)}
                         placeholder={tr("例如：https://dashscope.aliyuncs.com/compatible-mode/v1", "e.g. https://dashscope.aliyuncs.com/compatible-mode/v1", "npr. https://dashscope.aliyuncs.com/compatible-mode/v1")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
                       />
                     </Field>
                     <Field label={tr("模型名称", "Model Name", "Naziv modela")}>
@@ -756,7 +756,7 @@ export default function ProfilePage() {
                         value={imageModel}
                         onChange={(e) => setImageModel(e.target.value)}
                         placeholder={tr("例如：qwen-image-max", "e.g. qwen-image-max", "npr. qwen-image-max")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
                       />
                     </Field>
                     <Field label={tr("API Key", "API Key", "API ključ")}>
@@ -765,7 +765,7 @@ export default function ProfilePage() {
                         value={imageApiKey}
                         onChange={(e) => setImageApiKey(e.target.value)}
                         placeholder={tr("请输入图像生成 API Key", "Enter image generation API Key", "Unesi API ključ za generiranje slika")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white font-mono"
                         autoComplete="off"
                       />
                     </Field>
@@ -819,7 +819,7 @@ export default function ProfilePage() {
       {deleteConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => (deleting ? null : setDeleteConfirmOpen(false))} />
-          <div className="relative z-10 w-[92vw] max-w-md rounded-sm border border-ink/20 bg-white shadow-lg p-4">
+          <div className="relative z-10 w-[92vw] max-w-md rounded-xl border border-ink/20 bg-white shadow-lg p-4">
             <div className="text-sm font-medium text-ink mb-2">{tr("确认删除", "Confirm deletion", "Potvrdi brisanje")}</div>
             <div className="text-sm text-ink-light">
               {tr("确定要删除自定义配置吗？删除后将使用平台免费额度。", "Are you sure you want to delete the custom configuration? After deletion, platform free quota will be used.", "Jesi li siguran da želiš obrisati prilagođenu konfiguraciju? Nakon brisanja koristit će se besplatna kvota platforme.")}
@@ -854,7 +854,7 @@ export default function ProfilePage() {
       {switchConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSwitchConfirmOpen(false)} />
-          <div className="relative z-10 w-[92vw] max-w-md rounded-sm border border-ink/20 bg-white shadow-lg p-4">
+          <div className="relative z-10 w-[92vw] max-w-md rounded-xl border border-ink/20 bg-white shadow-lg p-4">
             <div className="text-sm font-medium text-ink mb-2">{tr("切换配置模式", "Switch configuration mode", "Promijeni način konfiguracije")}</div>
             <div className="text-sm text-ink-light">
               {savedAccessMode === "preset"
@@ -895,7 +895,7 @@ export default function ProfilePage() {
       {/* Toast */}
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-sm text-sm font-medium shadow-lg animate-fade-in ${
+          className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg animate-fade-in ${
             toast.type === "success"
               ? "bg-green-50 text-green-800 border border-green-200"
               : toast.type === "error"

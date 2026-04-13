@@ -104,14 +104,14 @@ export function RefreshStrategyEditor({
             locale={locale}
             placeholder={tr("如：深圳", "e.g. Shenzhen", "npr. Zagreb")}
             helperText={tr("搜索后请选择具体地点，例如：上海 · 中国、巴黎 · 法国、Singapore · Singapore。", "Search and choose a specific place, for example Shanghai · China, Paris · France, or Singapore · Singapore.", "Pretraži i odaberi točnu lokaciju, primjerice Zagreb · Hrvatska, Pariz · Francuska ili Singapore · Singapore.")}
-            className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
           />
         </Field>
         <Field label={tr("时区", "Time zone", "Vremenska zona")}>
           <select
             value={timezoneValue}
             onChange={(e) => setTimezoneValue(e.target.value)}
-            className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm appearance-none bg-transparent"
+            className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm appearance-none bg-transparent"
           >
             <option value="">{tr("跟随地点自动填写", "Use location / auto", "Koristi lokaciju / automatski")}</option>
             {TIMEZONE_OPTIONS.map((tz) => (
@@ -183,12 +183,12 @@ export function RefreshStrategyEditor({
                 }
               }}
               placeholder={tr("自定义人设风格", "Custom persona style", "Prilagođeni stil persone")}
-              className="flex-1 rounded-sm border border-ink/20 px-3 py-2 text-sm"
+              className="flex-1 rounded-xl border border-ink/20 px-3 py-2 text-sm"
             />
             <button
               type="button"
               onClick={handleAddCustomPersona}
-              className="rounded-sm border border-ink/20 px-3 py-2 text-sm"
+              className="rounded-xl border border-ink/20 px-3 py-2 text-sm"
             >
               {tr("添加", "Add", "Dodaj")}
             </button>
@@ -215,7 +215,7 @@ export function RefreshStrategyEditor({
               <button
                 key={key}
                 onClick={() => setStrategy(key)}
-                className={`group p-3 rounded-sm border text-left transition-colors ${
+                className={`group p-3 rounded-xl border text-left transition-colors ${
                   strategy === key
                     ? "border-ink bg-ink text-white"
                     : "border-ink/10 hover:bg-ink hover:text-white"
@@ -243,7 +243,7 @@ export function RefreshStrategyEditor({
             max={1440}
             value={refreshMin}
             onChange={(e) => setRefreshMin(Number(e.target.value))}
-            className="w-32 rounded-sm border border-ink/20 px-3 py-2 text-sm"
+            className="w-32 rounded-xl border border-ink/20 px-3 py-2 text-sm"
           />
           <p className="mt-2 text-xs text-ink-light">
             {tr("可设置范围：10-1440 分钟", "Allowed range: 10-1440 minutes", "Dopušteni raspon: 10-1440 minuta")}

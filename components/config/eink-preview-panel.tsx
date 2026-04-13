@@ -49,9 +49,9 @@ export function EInkPreviewPanel({
       </CardHeader>
       {/* keep sizing consistent with /preview page */}
       <CardContent className="h-[calc(55vh-80px)] w-full max-w-[400px] mx-auto flex flex-col p-0">
-        <div className="border border-ink/10 rounded-sm bg-paper flex flex-col items-center justify-center flex-1 w-full min-h-0 py-3 px-3">
+        <div className="border border-ink/10 rounded-xl bg-paper flex flex-col items-center justify-center flex-1 w-full min-h-0 py-3 px-3">
           {previewLoading ? (
-            <div className="flex w-full max-w-[400px] aspect-[4/3] items-center justify-center rounded-sm border border-ink/15 bg-white">
+            <div className="flex w-full max-w-[400px] aspect-[4/3] items-center justify-center rounded-xl border border-ink/15 bg-white">
               <div className="text-center px-4">
                 <Loader2 size={32} className="animate-spin mx-auto text-ink-light mb-3" />
                 <p className="text-sm text-ink-light">{previewStatusText || tr("预览生成中...", "Generating preview...", "Generiram pregled...")}</p>
@@ -59,7 +59,7 @@ export function EInkPreviewPanel({
             </div>
           ) : previewImg ? (
             <div className="flex flex-col items-center gap-2 w-full">
-              <div className="relative w-full max-w-[400px] aspect-[4/3] bg-white border border-ink/20 rounded-sm overflow-hidden shrink-0">
+              <div className="relative w-full max-w-[400px] aspect-[4/3] bg-white border border-ink/20 rounded-xl overflow-hidden shrink-0">
                 <Image src={previewImg} alt="Preview" fill unoptimized className="object-contain" />
               </div>
               {previewLlmStatus ? (
@@ -67,7 +67,7 @@ export function EInkPreviewPanel({
               ) : null}
             </div>
           ) : (
-            <div className="flex w-full max-w-[400px] aspect-[4/3] flex-col items-center justify-center rounded-sm border border-ink/20 bg-white px-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.04)]">
+            <div className="flex w-full max-w-[400px] aspect-[4/3] flex-col items-center justify-center rounded-xl border border-ink/20 bg-white px-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.04)]">
               <Eye size={32} className="text-ink-light mb-3 shrink-0" />
               <p className="text-sm text-ink-light text-center leading-snug">
                 {emptyStateHint ||
@@ -79,7 +79,7 @@ export function EInkPreviewPanel({
 
         <div className="border-t border-ink/10 p-3 bg-white">
           {previewImg && !previewLoading && previewCacheHit === true ? (
-            <div className="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
+            <div className="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-2 py-1.5">
               {tr(
                 "当前预览为历史缓存。如需查看最新效果，请点击“重新生成预览”。",
                 'Current preview is from cache. Click "Regenerate Preview" to fetch latest output.',

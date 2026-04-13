@@ -8,6 +8,18 @@ import { LocationPicker } from "@/components/config/location-picker";
 import { ModeSelector } from "@/components/config/mode-selector";
 import { EInkPreviewPanel } from "@/components/config/eink-preview-panel";
 import { SurfaceLayoutDialog } from "@/components/config/surface-layout-dialog";
+import { SurfacePlaylistEditor } from "@/components/config/surface-playlist-editor";
+import { SurfaceScheduleEditor } from "@/components/config/surface-schedule-editor";
+import { SurfaceCreateWizard } from "@/components/config/surface-create-wizard";
+import {
+  effectivePreviewSurfaceId,
+  normalizePlaylist,
+  validatePlaylist,
+  validateScheduleNonOverlapping,
+  type SurfacePlaybackMode,
+  type SurfacePlaylistEntry,
+  type SurfaceScheduleBlock,
+} from "@/lib/surface-playback";
 import {
   DEFAULT_PANEL_H,
   DEFAULT_PANEL_W,
@@ -48,8 +60,12 @@ import {
   type LocationValue,
 } from "@/lib/locations";
 import {
+  defaultModelForConfigApiKeysTab,
+  modelsForConfigApiKeysTab,
+} from "@/lib/user-config-llm-models";
+import {
   buildGridSpec,
-  buildLayoutFromSlots,
+  modeSupportsSlotTypeLiteral,
   normalizeSurfaceGridSpec,
   sortSurfaceSlotsReadingOrder as sortSurfaceSlotsReadingOrderLib,
   type SurfaceGridSlot,
@@ -251,10 +267,35 @@ function legacyTypeToMode(t: string): string {
 }
 
 function resolveSurfaceSlotMode(item: Record<string, unknown> | null | undefined): string {
-  if (!item || typeof item !== "object") return "STOIC";
+  if (!item || typeof item !== "object") return "";
   const m = item.mode ?? item.mode_id ?? item.persona;
   if (typeof m === "string" && m.trim()) return m.trim().toUpperCase();
-  return legacyTypeToMode(String(item.type ?? "text"));
+  const t = item.type;
+  if (t !== undefined && t !== null && String(t).trim()) return legacyTypeToMode(String(t));
+  return "";
+}
+
+function isPresetSurfaceId(surfaceId: string): boolean {
+  return DEFAULT_SURFACE_LIBRARY.some((p) => p.id === surfaceId);
+}
+
+function surfacesPayloadFromCatalog(
+  surfaceCatalog: Array<{ id: string; definition: Record<string, unknown> }>,
+): Array<Record<string, unknown>> {
+  return surfaceCatalog.map((surface) => ({ ...surface.definition, id: surface.id, type: "surface" }));
+}
+
+function surfaceHasEmptyGridSlot(def: Record<string, unknown> | null | undefined): boolean {
+  if (!def || typeof def !== "object") return false;
+  const slots = def.slots;
+  if (!Array.isArray(slots)) return false;
+  for (const raw of slots) {
+    if (!raw || typeof raw !== "object") continue;
+    const s = raw as Record<string, unknown>;
+    const mid = String(s.mode_id || s.mode || "").trim();
+    if (!mid) return true;
+  }
+  return false;
 }
 
 /** Surface uses fixed grid + slots (spec); legacy surfaces use layout[].position only. */
@@ -397,6 +438,9 @@ interface DeviceConfig {
   assignedSurface?: string;
   assigned_surface?: string;
   surfaces?: Array<Record<string, unknown>>;
+  surfacePlaylist?: SurfacePlaylistEntry[];
+  surfacePlaybackMode?: SurfacePlaybackMode;
+  surface_playback_mode?: SurfacePlaybackMode;
   surfaceSchedule?: Array<Record<string, unknown>>;
   is_focus_listening?: boolean;
   focus_listening?: number;
@@ -727,7 +771,12 @@ function ConfigPageInner() {
   const [activeTab, setActiveTab] = useState<TabId>("modes");
   const [config, setConfig] = useState<DeviceConfig>({});
   const [selectedModes, setSelectedModes] = useState<Set<string>>(new Set(["STOIC", "ZEN", "DAILY"]));
-  const [selectedSurfaces, setSelectedSurfaces] = useState<Set<string>>(new Set(["work"]));
+  const [surfacePlaybackMode, setSurfacePlaybackMode] = useState<SurfacePlaybackMode>("single");
+  const [surfacePlaylist, setSurfacePlaylist] = useState<SurfacePlaylistEntry[]>([
+    { surface_id: "work", enabled: true, duration_sec: 300, order: 0 },
+  ]);
+  const [surfaceSchedule, setSurfaceSchedule] = useState<SurfaceScheduleBlock[]>([]);
+  const [surfaceCreateWizardOpen, setSurfaceCreateWizardOpen] = useState(false);
   const [strategy, setStrategy] = useState("random");
   const [refreshMin, setRefreshMin] = useState(60);
   const [deviceRenderMode, setDeviceRenderMode] = useState<"mode" | "surface">("mode");
@@ -1035,6 +1084,20 @@ function ConfigPageInner() {
     }
   }, [currentUser, loadUserApiKeys]);
 
+  const prevLlmAccessTabModeRef = useRef<"preset" | "custom_openai" | null>(null);
+  useEffect(() => {
+    if (prevLlmAccessTabModeRef.current === null) {
+      prevLlmAccessTabModeRef.current = llmAccessModeDraft;
+      return;
+    }
+    if (prevLlmAccessTabModeRef.current === llmAccessModeDraft) return;
+    prevLlmAccessTabModeRef.current = llmAccessModeDraft;
+    const opts = modelsForConfigApiKeysTab(llmAccessModeDraft);
+    setApiModelDraft((prev) =>
+      opts.includes(prev) ? prev : defaultModelForConfigApiKeysTab(llmAccessModeDraft),
+    );
+  }, [llmAccessModeDraft]);
+
   const currentLocation = useMemo(
     () => buildLocationValue(city, locationMeta),
     [city, locationMeta],
@@ -1182,10 +1245,6 @@ function ConfigPageInner() {
         setConfig(cfg);
         if (cfg.modes?.length) setSelectedModes(new Set(cfg.modes.map((m) => m.toUpperCase())));
         if (Array.isArray(cfg.surfaces) && cfg.surfaces.length) {
-          const ids = cfg.surfaces
-            .map((s) => (s && typeof s === "object" ? String((s as Record<string, unknown>).id || "").trim() : ""))
-            .filter(Boolean);
-          if (ids.length) setSelectedSurfaces(new Set(ids));
           const drafts: Record<string, Record<string, unknown>> = {};
           for (const s of cfg.surfaces) {
             if (!s || typeof s !== "object") continue;
@@ -1195,6 +1254,35 @@ function ConfigPageInner() {
             drafts[id] = { ...rec, id, type: "surface" };
           }
           setSurfaceDrafts(drafts);
+        }
+        const rawPl = cfg.surfacePlaylist;
+        if (Array.isArray(rawPl) && rawPl.length > 0) {
+          setSurfacePlaylist(normalizePlaylist(rawPl as unknown[]));
+        } else if (Array.isArray(cfg.surfaces) && cfg.surfaces.length) {
+          const ids = cfg.surfaces
+            .map((s) => (s && typeof s === "object" ? String((s as Record<string, unknown>).id || "").trim() : ""))
+            .filter(Boolean);
+          setSurfacePlaylist(
+            ids.map((surface_id, order) => ({
+              surface_id,
+              enabled: true,
+              duration_sec: 300,
+              order,
+            })),
+          );
+        }
+        const spm = (cfg.surfacePlaybackMode || cfg.surface_playback_mode || "") as string;
+        if (spm === "single" || spm === "rotate" || spm === "scheduled") {
+          setSurfacePlaybackMode(spm);
+        } else if (Array.isArray(cfg.surfaceSchedule) && cfg.surfaceSchedule.length > 0) {
+          setSurfacePlaybackMode("scheduled");
+        } else {
+          setSurfacePlaybackMode("single");
+        }
+        if (Array.isArray(cfg.surfaceSchedule) && cfg.surfaceSchedule.length) {
+          setSurfaceSchedule(cfg.surfaceSchedule as SurfaceScheduleBlock[]);
+        } else {
+          setSurfaceSchedule([]);
         }
         if (cfg.refreshStrategy || cfg.refresh_strategy) setStrategy((cfg.refreshStrategy || cfg.refresh_strategy) as string);
         if (cfg.refreshInterval || cfg.refresh_minutes) setRefreshMin((cfg.refreshInterval || cfg.refresh_minutes) as number);
@@ -1421,10 +1509,38 @@ function ConfigPageInner() {
           })
           .filter(([, ov]) => Object.keys(ov).length > 0)
       );
-      const normalizedSurfaces = surfaceCatalog
-        .filter((surface) => selectedSurfaces.has(surface.id))
-        .map((surface) => ({ ...surface.definition, id: surface.id, type: "surface" }));
+      const normalizedSurfaces = surfacesPayloadFromCatalog(surfaceCatalog);
       const resolvedAssignedSurface = assignedSurface || normalizedSurfaces[0]?.id || "";
+      const plErr = validatePlaylist(surfacePlaylist);
+      if (plErr) {
+        showToast(
+          plErr === "playlist_needs_enabled"
+            ? tr("播放列表至少启用一项", "Enable at least one playlist item", "Uključi barem jednu stavku playliste")
+            : tr("每项时长至少 10 秒", "Each duration must be ≥ 10 seconds", "Trajanje ≥ 10 s"),
+          "error",
+        );
+        return;
+      }
+      if (surfacePlaybackMode === "scheduled") {
+        if (!surfaceSchedule.length) {
+          showToast(tr("日程模式至少需要一个时段", "Scheduled mode needs at least one block", "Rasporedu treba barem jedan blok"), "error");
+          return;
+        }
+        const ov = validateScheduleNonOverlapping(surfaceSchedule);
+        if (ov) {
+          showToast(tr("日程时段不能重叠", "Schedule blocks must not overlap", "Blokovi se ne smiju preklapati"), "error");
+          return;
+        }
+      }
+      for (const s of surfaceCatalog) {
+        if (surfaceHasEmptyGridSlot(s.definition)) {
+          showToast(
+            tr(`Surface「${s.id}」有未分配槽位`, `Surface “${s.id}” has empty slots`, `Surface „${s.id}” ima prazne slotove`),
+            "error",
+          );
+          return;
+        }
+      }
       const body: Record<string, unknown> = {
         mac,
         modes: Array.from(selectedModes),
@@ -1440,7 +1556,9 @@ function ConfigPageInner() {
         assignedMode: assignedLegacyMode || (Array.from(selectedModes)[0] || "STOIC"),
         assignedSurface: resolvedAssignedSurface,
         surfaces: normalizedSurfaces,
-        surfaceSchedule: [],
+        surfacePlaylist: surfacePlaylist.map((p, order) => ({ ...p, order })),
+        surfacePlaybackMode,
+        surfaceSchedule,
         is_focus_listening: isFocusListening,
         always_active: alwaysActive,
       };
@@ -1493,10 +1611,38 @@ function ConfigPageInner() {
           })
           .filter(([, ov]) => Object.keys(ov).length > 0)
       );
-      const normalizedSurfaces = surfaceCatalog
-        .filter((surface) => selectedSurfaces.has(surface.id))
-        .map((surface) => ({ ...surface.definition, id: surface.id, type: "surface" }));
+      const normalizedSurfaces = surfacesPayloadFromCatalog(surfaceCatalog);
       const resolvedAssignedSurface = assignedSurface || normalizedSurfaces[0]?.id || "";
+      const plErr = validatePlaylist(surfacePlaylist);
+      if (plErr) {
+        showToast(
+          plErr === "playlist_needs_enabled"
+            ? tr("播放列表至少启用一项", "Enable at least one playlist item", "Uključi barem jednu stavku playliste")
+            : tr("每项时长至少 10 秒", "Each duration must be ≥ 10 seconds", "Trajanje ≥ 10 s"),
+          "error",
+        );
+        return;
+      }
+      if (surfacePlaybackMode === "scheduled") {
+        if (!surfaceSchedule.length) {
+          showToast(tr("日程模式至少需要一个时段", "Scheduled mode needs at least one block", "Rasporedu treba barem jedan blok"), "error");
+          return;
+        }
+        const ov = validateScheduleNonOverlapping(surfaceSchedule);
+        if (ov) {
+          showToast(tr("日程时段不能重叠", "Schedule blocks must not overlap", "Blokovi se ne smiju preklapati"), "error");
+          return;
+        }
+      }
+      for (const s of surfaceCatalog) {
+        if (surfaceHasEmptyGridSlot(s.definition)) {
+          showToast(
+            tr(`Surface「${s.id}」有未分配槽位`, `Surface “${s.id}” has empty slots`, `Surface „${s.id}” ima prazne slotove`),
+            "error",
+          );
+          return;
+        }
+      }
       const body: Record<string, unknown> = {
         mac,
         modes: Array.from(selectedModes),
@@ -1512,7 +1658,9 @@ function ConfigPageInner() {
         assignedMode: assignedLegacyMode || (Array.from(selectedModes)[0] || "STOIC"),
         assignedSurface: resolvedAssignedSurface,
         surfaces: normalizedSurfaces,
-        surfaceSchedule: [],
+        surfacePlaylist: surfacePlaylist.map((p, order) => ({ ...p, order })),
+        surfacePlaybackMode,
+        surfaceSchedule,
         is_focus_listening: isFocusListening,
         always_active: alwaysActive,
       };
@@ -2202,36 +2350,40 @@ function ConfigPageInner() {
     );
   };
 
-  const toggleSurface = useCallback((surfaceId: string) => {
-    setSelectedSurfaces((prev) => {
-      const next = new Set(prev);
-      if (next.has(surfaceId)) next.delete(surfaceId);
-      else next.add(surfaceId);
-      return next;
-    });
-  }, []);
+  const surfacePlaylistContains = useCallback(
+    (surfaceId: string) => surfacePlaylist.some((p) => p.surface_id === surfaceId),
+    [surfacePlaylist],
+  );
 
-  const handleSurfaceApply = useCallback(
+  const addSurfaceToPlaylist = useCallback(
     (surfaceId: string) => {
-      const wasSelected = selectedSurfaces.has(surfaceId);
-      toggleSurface(surfaceId);
-      if (!wasSelected && !assignedSurface) {
-        setAssignedSurface(surfaceId);
-      }
-      if (wasSelected) {
-        if (surfaceLayoutEditorId === surfaceId) {
-          setSurfaceLayoutEditorId("");
-          replaceSurfacePreviewImg(null);
-        }
-      }
-      showToast(
-        wasSelected
-          ? tr("已从 Surface 列表移除", "Removed from surfaces")
-          : tr("已加入 Surface 列表", "Added to surfaces"),
-        "success",
-      );
+      setSurfacePlaylist((prev) => {
+        if (prev.some((p) => p.surface_id === surfaceId)) return prev;
+        const next = [
+          ...prev,
+          { surface_id: surfaceId, enabled: true, duration_sec: 300, order: prev.length },
+        ];
+        return next.map((p, order) => ({ ...p, order }));
+      });
+      if (!assignedSurface) setAssignedSurface(surfaceId);
+      showToast(tr("已加入播放列表", "Added to playlist", "Dodano na playlistu"), "success");
     },
-    [assignedSurface, replaceSurfacePreviewImg, selectedSurfaces, showToast, surfaceLayoutEditorId, toggleSurface, tr],
+    [assignedSurface, showToast, tr],
+  );
+
+  const removeSurfaceFromPlaylist = useCallback(
+    (surfaceId: string) => {
+      setSurfacePlaylist((prev) => {
+        const next = prev.filter((p) => p.surface_id !== surfaceId);
+        return next.map((p, order) => ({ ...p, order }));
+      });
+      if (surfaceLayoutEditorId === surfaceId) {
+        setSurfaceLayoutEditorId("");
+        replaceSurfacePreviewImg(null);
+      }
+      showToast(tr("已从播放列表移除", "Removed from playlist", "Uklonjeno s playliste"), "success");
+    },
+    [replaceSurfacePreviewImg, showToast, surfaceLayoutEditorId, tr],
   );
 
   const handleCustomModeDelete = async (m: string) => {
@@ -2481,9 +2633,13 @@ function ConfigPageInner() {
       const id = String((raw as Record<string, unknown>).id || "").trim();
       if (!id) continue;
       const existing = map.get(id);
+      const rawName =
+        typeof (raw as Record<string, unknown>).name === "string"
+          ? String((raw as Record<string, unknown>).name).trim()
+          : "";
       map.set(id, {
         id,
-        name: existing?.name || id,
+        name: rawName || existing?.name || id,
         tip: existing?.tip || tr("设备配置里的 Surface", "Surface from device config", "Surface iz konfiguracije uređaja"),
         definition: { ...(raw as Record<string, unknown>), id, type: "surface" },
       });
@@ -2491,15 +2647,31 @@ function ConfigPageInner() {
     for (const [id, draft] of Object.entries(surfaceDrafts)) {
       if (!id) continue;
       const existing = map.get(id);
+      const draftName =
+        typeof (draft as Record<string, unknown>)?.name === "string"
+          ? String((draft as Record<string, unknown>).name).trim()
+          : "";
       map.set(id, {
         id,
-        name: existing?.name || id,
+        name: draftName || existing?.name || id,
         tip: existing?.tip || tr("自定义 Surface", "Custom surface", "Prilagođeni surface"),
         definition: { ...(existing?.definition || {}), ...(draft || {}), id, type: "surface" },
       });
     }
     return Array.from(map.values());
   }, [config.surfaces, locale, surfaceDrafts, tr]);
+
+  const simulatedPreviewSurfaceId = useMemo(() => {
+    const valid = new Set(surfaceCatalog.map((s) => s.id));
+    return effectivePreviewSurfaceId(
+      surfacePlaybackMode,
+      assignedSurface,
+      surfacePlaylist,
+      surfaceSchedule,
+      valid,
+      new Date(),
+    );
+  }, [surfaceCatalog, surfacePlaybackMode, assignedSurface, surfacePlaylist, surfaceSchedule]);
 
   const updateSurfaceSlotMode = useCallback(
     (surfaceId: string, target: SurfaceSlotEditTarget, modeId: string, memoText?: string) => {
@@ -2597,44 +2769,48 @@ function ConfigPageInner() {
           layout: payload.layout,
         },
       }));
-      showToast(tr("已应用网格布局", "Grid layout applied", "Mrežni raspored je primijenjen"), "success");
+      showToast(tr("已应用版面", "Layout applied", "Raspored je primijenjen"), "success");
     },
     [surfaceLayoutEditorId, surfaceCatalog, showToast, tr],
   );
 
-  const createCustomSurface = useCallback(() => {
-    const id = `custom_${Date.now().toString(36)}`;
-    const slots: SurfaceGridSlot[] = [
-      { id: "a", x: 0, y: 0, w: 1, h: 1, slot_type: "SMALL", mode_id: "STOIC" },
-      { id: "b", x: 1, y: 0, w: 1, h: 1, slot_type: "SMALL", mode_id: "STOIC" },
-      { id: "c", x: 0, y: 1, w: 1, h: 1, slot_type: "SMALL", mode_id: "STOIC" },
-      { id: "d", x: 1, y: 1, w: 1, h: 1, slot_type: "SMALL", mode_id: "STOIC" },
-    ];
-    const grid = buildGridSpec(2, 2);
-    const layout = buildLayoutFromSlots(slots, []);
-    setSurfaceDrafts((prev) => ({
-      ...prev,
-      [id]: {
-        id,
-        type: "surface",
-        grid,
-        slots,
-        layout,
-        refresh: { mode: "hybrid", interval: 300 },
-        rules: [],
-      },
-    }));
-    setDeviceRenderMode("surface");
-    setAssignedSurface(id);
-    setSurfacePreviewTarget(id);
-    setSurfaceLayoutEditorId(id);
-    setSelectedSurfaces((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-    showToast(tr("已创建自定义 Surface", "Created custom surface", "Kreiran prilagođeni surface"), "success");
-  }, [showToast, tr]);
+  const onSurfaceWizardComplete = useCallback(
+    (payload: {
+      id: string;
+      displayName: string;
+      grid: ReturnType<typeof buildGridSpec>;
+      slots: SurfaceGridSlot[];
+      layout: Array<Record<string, unknown>>;
+    }) => {
+      setSurfaceDrafts((prev) => ({
+        ...prev,
+        [payload.id]: {
+          id: payload.id,
+          type: "surface",
+          name: payload.displayName,
+          grid: payload.grid,
+          slots: payload.slots,
+          layout: payload.layout,
+          refresh: { mode: "hybrid", interval: 300 },
+          rules: [],
+        },
+      }));
+      setSurfacePlaylist((pl) => {
+        if (pl.some((p) => p.surface_id === payload.id)) return pl;
+        const next = [
+          ...pl,
+          { surface_id: payload.id, enabled: true, duration_sec: 300, order: pl.length },
+        ];
+        return next.map((p, order) => ({ ...p, order }));
+      });
+      setDeviceRenderMode("surface");
+      setAssignedSurface(payload.id);
+      setSurfacePreviewTarget(payload.id);
+      setSurfaceLayoutEditorId(payload.id);
+      showToast(tr("已创建自定义 Surface", "Created custom surface", "Kreiran prilagođeni surface"), "success");
+    },
+    [showToast, tr],
+  );
 
   const activeSurfaceDefinition = useMemo(
     () =>
@@ -2682,6 +2858,14 @@ function ConfigPageInner() {
     async (surfaceIdOverride?: string) => {
       const sid = (surfaceIdOverride || surfaceLayoutEditorId || assignedSurface || "").trim();
       if (!sid) return;
+      const defPreview = surfaceCatalog.find((s) => s.id === sid)?.definition;
+      if (surfaceHasEmptyGridSlot(defPreview)) {
+        showToast(
+          tr("请先为所有槽位分配模式再预览", "Assign a mode to every slot before preview", "Dodijeli mod svakom slotu prije pregleda"),
+          "error",
+        );
+        return;
+      }
       setSurfacePreviewLoading(true);
       setSurfacePreviewStatusText(tr("正在生成 Surface 预览...", "Generating surface preview...", "Generiram surface pregled..."));
       try {
@@ -2712,7 +2896,16 @@ function ConfigPageInner() {
         setSurfacePreviewStatusText("");
       }
     },
-    [activeSurfaceDefinition, assignedSurface, mac, replaceSurfacePreviewImg, showToast, surfaceCatalog, surfaceLayoutEditorId, tr],
+    [
+      activeSurfaceDefinition,
+      assignedSurface,
+      mac,
+      replaceSurfacePreviewImg,
+      showToast,
+      surfaceCatalog,
+      surfaceLayoutEditorId,
+      tr,
+    ],
   );
 
   const openSurfaceLayoutEditor = useCallback((surfaceId: string) => {
@@ -2720,11 +2913,6 @@ function ConfigPageInner() {
     setAssignedSurface(surfaceId);
     setSurfacePreviewTarget(surfaceId);
     setSurfaceLayoutEditorId(surfaceId);
-    setSelectedSurfaces((prev) => {
-      const next = new Set(prev);
-      next.add(surfaceId);
-      return next;
-    });
     surfacePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
@@ -2737,13 +2925,13 @@ function ConfigPageInner() {
         const slot = slots.find((s) => String(s.id || "") === target.slotId);
         const block = layout.find((b) => String(b.slot_id || "") === target.slotId);
         const modeSource = block || slot || null;
-        setSurfaceSlotModalMode(resolveSurfaceSlotMode(modeSource));
+        setSurfaceSlotModalMode(resolveSurfaceSlotMode(modeSource as Record<string, unknown>) || "STOIC");
         setSurfaceSlotModalMemo(typeof block?.memo_text === "string" ? block.memo_text : "");
         setSurfaceSlotModal({ kind: "grid", surfaceId, slotId: target.slotId });
         return;
       }
       const item = layout.find((x) => String(x.position || "") === target.position);
-      setSurfaceSlotModalMode(resolveSurfaceSlotMode(item));
+      setSurfaceSlotModalMode(resolveSurfaceSlotMode(item) || "STOIC");
       setSurfaceSlotModalMemo(typeof item?.memo_text === "string" ? item.memo_text : "");
       setSurfaceSlotModal({ kind: "legacy", surfaceId, position: target.position });
     },
@@ -2770,10 +2958,16 @@ function ConfigPageInner() {
     setSurfaceSlotModal(null);
   }, [surfaceSlotModal, surfaceSlotModalMemo, surfaceSlotModalMode, updateSurfaceSlotMode]);
 
-  const surfaceSlotModeChoices = useMemo(
-    () => catalogItems.filter((it) => it.mode_id.toUpperCase() !== "MY_ADAPTIVE"),
-    [catalogItems],
-  );
+  const surfaceSlotModeChoices = useMemo(() => {
+    const base = catalogItems.filter((it) => it.mode_id.toUpperCase() !== "MY_ADAPTIVE");
+    if (!surfaceSlotModal || surfaceSlotModal.kind !== "grid") return base;
+    const def = surfaceCatalog.find((s) => s.id === surfaceSlotModal.surfaceId)?.definition;
+    const slots = (def?.slots as SurfaceGridSlot[]) || [];
+    const slot = slots.find((s) => String(s.id || "") === surfaceSlotModal.slotId);
+    if (!slot) return base;
+    const st = String(slot.slot_type || "SMALL").toUpperCase();
+    return base.filter((it) => modeSupportsSlotTypeLiteral(it.supported_slot_types, st));
+  }, [catalogItems, surfaceCatalog, surfaceSlotModal]);
 
   const activeModeSchema = settingsMode ? (modeSchemaMap[settingsMode] || []) : [];
 
@@ -2860,7 +3054,7 @@ function ConfigPageInner() {
             <Loader2 size={16} className="animate-spin" /> {tr("加载中...", "Loading...", "Učitavanje...")}
           </div>
         ) : currentUser === null ? (
-          <div className="flex items-start gap-2 p-3 rounded-sm border border-amber-200 bg-amber-50 text-sm text-amber-800">
+          <div className="flex items-start gap-2 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-800">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <div>
               <p className="font-medium">{tr("请先登录", "Please sign in first", "Najprije se prijavi")}</p>
@@ -2871,7 +3065,7 @@ function ConfigPageInner() {
             </div>
           </div>
         ) : (macAccessDenied || denyByMembership) ? (
-          <div className="flex items-start gap-2 p-3 rounded-sm border border-red-200 bg-red-50 text-sm text-red-800">
+          <div className="flex items-start gap-2 p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-800">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <div>
               <p className="font-medium">{tr("无权访问该设备", "No permission to access this device", "Nemaš pristup ovom uređaju")}</p>
@@ -2904,7 +3098,7 @@ function ConfigPageInner() {
                 <Loader2 size={16} className="animate-spin" /> {tr("加载待处理请求...", "Loading pending requests...", "Učitavam zahtjeve na čekanju...")}
               </div>
             ) : pendingRequests.length > 0 ? (
-              <div className="p-3 rounded-sm border border-amber-200 bg-amber-50">
+              <div className="p-3 rounded-xl border border-amber-200 bg-amber-50">
                 <p className="text-sm font-medium text-amber-900 mb-2">{tr("待你处理的绑定请求", "Pending binding requests", "Zahtjevi za vezanje koji čekaju tvoju potvrdu")}</p>
                 <div className="space-y-2">
                   {pendingRequests.map((item) => (
@@ -2923,7 +3117,7 @@ function ConfigPageInner() {
               </div>
             ) : null}
 
-            <div className="p-3 rounded-sm border border-ink/10 bg-paper">
+            <div className="p-3 rounded-xl border border-ink/10 bg-paper">
               <p className="text-sm font-medium text-ink mb-2 flex items-center gap-1">
                 <Monitor size={14} /> {tr("配对设备", "Pair Device", "Upari uređaj")}
               </p>
@@ -2933,7 +3127,7 @@ function ConfigPageInner() {
                   value={pairCodeInput}
                   onChange={(e) => setPairCodeInput(e.target.value.toUpperCase())}
                   placeholder={tr("配对码", "Pair Code", "Kod za uparivanje")}
-                  className="w-full sm:w-64 rounded-sm border border-ink/20 px-3 py-1.5 text-sm font-mono uppercase tracking-[0.2em]"
+                  className="w-full sm:w-64 rounded-xl border border-ink/20 px-3 py-1.5 text-sm font-mono uppercase tracking-[0.2em]"
                 />
                 <Button size="sm" variant="outline" onClick={handlePairDevice} disabled={!pairCodeInput.trim() || pairingDevice}>
                   {pairingDevice ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
@@ -2942,7 +3136,7 @@ function ConfigPageInner() {
               </div>
             </div>
 
-            <div className="p-3 rounded-sm border border-ink/10 bg-paper">
+            <div className="p-3 rounded-xl border border-ink/10 bg-paper">
               <p className="text-sm font-medium text-ink mb-2 flex items-center gap-1">
                 <Plus size={14} /> {tr("按 MAC 手动绑定", "Bind by MAC", "Veži po MAC adresi")}
               </p>
@@ -2952,13 +3146,13 @@ function ConfigPageInner() {
                   value={bindMacInput}
                   onChange={(e) => setBindMacInput(e.target.value)}
                   placeholder={tr("MAC 地址 (如 AA:BB:CC:DD:EE:FF)", "MAC address (e.g. AA:BB:CC:DD:EE:FF)", "MAC adresa (npr. AA:BB:CC:DD:EE:FF)")}
-                  className="w-full sm:w-[360px] rounded-sm border border-ink/20 px-3 py-1.5 text-sm font-mono"
+                  className="w-full sm:w-[360px] rounded-xl border border-ink/20 px-3 py-1.5 text-sm font-mono"
                 />
                 <input
                   value={bindNicknameInput}
                   onChange={(e) => setBindNicknameInput(e.target.value)}
                   placeholder={tr("别名（可选）", "Nickname (optional)", "Nadimak (opcionalno)")}
-                  className="w-32 rounded-sm border border-ink/20 px-3 py-1.5 text-sm"
+                  className="w-32 rounded-xl border border-ink/20 px-3 py-1.5 text-sm"
                 />
                 <Button size="sm" variant="outline" onClick={async () => {
                   const targetMac = bindMacInput.trim();
@@ -2987,7 +3181,7 @@ function ConfigPageInner() {
             ) : userDevices.length > 0 ? (
               <div className="space-y-2">
                 {userDevices.map((d) => (
-                  <div key={d.mac} className="flex items-center justify-between p-3 rounded-sm border border-ink/10 bg-paper hover:border-ink/30 transition-colors">
+                  <div key={d.mac} className="flex items-center justify-between p-3 rounded-xl border border-ink/10 bg-paper hover:border-ink/30 transition-colors">
                     <div className="flex items-center gap-3">
                       <Monitor size={18} className="text-ink-light" />
                       <div>
@@ -3025,7 +3219,7 @@ function ConfigPageInner() {
                 ))}
               </div>
             ) : (
-              <div className="flex items-start gap-2 p-3 rounded-sm border border-amber-200 bg-amber-50 text-sm text-amber-800">
+              <div className="flex items-start gap-2 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-800">
                 <AlertCircle size={16} className="mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium">{tr("未绑定设备", "No bound devices", "Nema povezanih uređaja")}</p>
@@ -3054,7 +3248,7 @@ function ConfigPageInner() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-sm transition-colors ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                     activeTab === tab.id
                       ? "bg-ink text-white font-medium"
                       : "text-ink-light hover:bg-paper-dark hover:text-ink"
@@ -3085,7 +3279,7 @@ function ConfigPageInner() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-2 rounded-sm text-xs whitespace-nowrap transition-colors ${
+                  className={`px-3 py-2 rounded-xl text-xs whitespace-nowrap transition-colors ${
                     activeTab === tab.id ? "bg-ink text-white" : "bg-paper-dark text-ink-light"
                   }`}
                 >
@@ -3179,7 +3373,7 @@ function ConfigPageInner() {
 
                     <div className="space-y-3">
                       {customGenerating ? (
-                        <div className="rounded-sm border border-ink/10 bg-paper px-3 py-3 text-sm text-ink-light flex items-center gap-2">
+                        <div className="rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm text-ink-light flex items-center gap-2">
                           <Loader2 size={16} className="animate-spin" />
                           {tr("模式生成中...", "Generating mode...", "Generiram mod...")}
                         </div>
@@ -3197,7 +3391,7 @@ function ConfigPageInner() {
                           "Describe your mode, e.g. show one English word and definition daily with a large centered font",
                           "Opiši svoj mod, npr. svaki dan prikaži jednu englesku riječ i definiciju s velikim centriranim fontom",
                         )}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm resize-y bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm resize-y bg-white"
                         disabled={customGenerating}
                       />
 
@@ -3208,7 +3402,7 @@ function ConfigPageInner() {
                           setCustomEditorSource((v) => v || "manual");
                         }}
                         placeholder={tr("模式名称（例如：今日英语）", "Mode name (e.g. Daily English)", "Naziv moda (npr. Dnevni engleski)")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                         disabled={customGenerating}
                       />
 
@@ -3243,8 +3437,8 @@ function ConfigPageInner() {
                     <Card>
                       <CardHeader>
                         <div className="flex flex-wrap items-start justify-between gap-2">
-                          <CardTitle className="text-base">{tr("可用 Surfaces", "Available Surfaces", "Dostupni surfaces")}</CardTitle>
-                          <Button type="button" variant="outline" size="sm" className="text-xs shrink-0" onClick={createCustomSurface}>
+                          <CardTitle className="text-base">{tr("Surface 库", "Surface library", "Surface biblioteka")}</CardTitle>
+                          <Button type="button" variant="outline" size="sm" className="text-xs shrink-0" onClick={() => setSurfaceCreateWizardOpen(true)}>
                             <Plus size={14} className="mr-1 inline" />
                             {tr("新建自定义", "New custom", "Novi prilagođeni")}
                           </Button>
@@ -3260,45 +3454,118 @@ function ConfigPageInner() {
                       <CardContent>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {surfaceCatalog.map((surface) => {
-                            const isSelected = selectedSurfaces.has(surface.id);
+                            const inPlaylist = surfacePlaylistContains(surface.id);
+                            const isDefault = assignedSurface === surface.id;
                             const isEditing = surfaceLayoutEditorId === surface.id;
+                            const g = surface.definition.grid as { columns?: number; rows?: number } | undefined;
+                            const slotCount = Array.isArray(surface.definition.slots) ? surface.definition.slots.length : 0;
+                            const mini = g ? `${g.columns ?? "?"}×${g.rows ?? "?"} · ${slotCount}` : "—";
                             return (
                               <div
                                 key={surface.id}
-                                className="flex h-[118px] flex-col overflow-hidden rounded-sm border border-ink/10 bg-white"
+                                className="flex flex-col overflow-hidden rounded-xl border border-ink/10 bg-white"
                               >
                                 <button
                                   type="button"
                                   onClick={() => openSurfaceLayoutEditor(surface.id)}
-                                  className={`flex h-20 w-full shrink-0 flex-col justify-start overflow-hidden px-3 py-2 text-left transition-colors ${
+                                  className={`flex min-h-[72px] w-full shrink-0 flex-col justify-start overflow-hidden px-3 py-2 text-left transition-colors ${
                                     isEditing
                                       ? "bg-ink text-white ring-2 ring-inset ring-white/35"
-                                      : isSelected
+                                      : isDefault
                                         ? "bg-ink/90 text-white"
                                         : "hover:bg-paper-dark text-ink"
                                   }`}
                                   title={surface.tip}
                                 >
                                   <div className="text-sm font-semibold leading-tight line-clamp-2">{surface.name}</div>
+                                  <div className="text-[10px] uppercase text-ink-light mt-0.5">
+                                    {isPresetSurfaceId(surface.id)
+                                      ? tr("预设", "Preset", "Predložak")
+                                      : tr("自定义", "Custom", "Prilagođeno")}
+                                  </div>
+                                  <div className="mt-1 font-mono text-[10px] text-ink-light">{mini}</div>
                                   <div
-                                    className={`mt-0.5 line-clamp-2 text-[11px] leading-snug ${isEditing || isSelected ? "text-white/85" : "text-ink-light"}`}
+                                    className={`mt-0.5 line-clamp-2 text-[11px] leading-snug ${isEditing || isDefault ? "text-white/85" : "text-ink-light"}`}
                                   >
                                     {surface.tip}
                                   </div>
                                 </button>
-                                <div className="shrink-0 border-t border-ink/10">
+                                <div className="grid grid-cols-2 gap-px border-t border-ink/10 bg-ink/10 text-[10px]">
                                   <button
                                     type="button"
-                                    onClick={() => handleSurfaceApply(surface.id)}
-                                    className="flex h-9 w-full items-center justify-center px-2 text-[11px] sm:text-xs text-ink transition-colors hover:bg-ink hover:text-white"
-                                    title={
-                                      isSelected
-                                        ? tr("从设备轮播列表移除", "Remove from device surface list", "Ukloni s popisa surfacea")
-                                        : tr("加入设备轮播列表", "Add to device surface list", "Dodaj na popis surfacea")
+                                    className="bg-white py-1.5 hover:bg-ink hover:text-white text-ink"
+                                    onClick={() => openSurfaceLayoutEditor(surface.id)}
+                                  >
+                                    {tr("编辑", "Edit", "Uredi")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="bg-white py-1.5 hover:bg-ink hover:text-white text-ink"
+                                    onClick={() => {
+                                      const src = surfaceCatalog.find((s) => s.id === surface.id);
+                                      if (!src) return;
+                                      const newId = `custom_${Date.now().toString(36)}`;
+                                      setSurfaceDrafts((prev) => ({
+                                        ...prev,
+                                        [newId]: {
+                                          ...src.definition,
+                                          id: newId,
+                                          type: "surface",
+                                          name: `${src.name} (2)`,
+                                        },
+                                      }));
+                                      addSurfaceToPlaylist(newId);
+                                      openSurfaceLayoutEditor(newId);
+                                    }}
+                                  >
+                                    {tr("复制", "Duplicate", "Dupliciraj")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="bg-white py-1.5 hover:bg-ink hover:text-white text-ink"
+                                    onClick={() =>
+                                      inPlaylist ? removeSurfaceFromPlaylist(surface.id) : addSurfaceToPlaylist(surface.id)
                                     }
                                   >
-                                    {isSelected ? tr("从列表移除 −", "Remove from list −", "Ukloni s popisa −") : tr("加入列表 +", "Add to list +", "Na popis +")}
+                                    {inPlaylist
+                                      ? tr("从播放列表移除", "Remove from playlist", "Ukloni s playliste")
+                                      : tr("加入播放列表", "Add to playlist", "Dodaj na playlistu")}
                                   </button>
+                                  <button
+                                    type="button"
+                                    className="bg-white py-1.5 hover:bg-ink hover:text-white text-ink"
+                                    onClick={() => {
+                                      setAssignedSurface(surface.id);
+                                      showToast(tr("已设为默认 Surface", "Set as default surface", "Postavljeno kao zadano"), "success");
+                                    }}
+                                  >
+                                    {tr("设为默认", "Set default", "Zadano")}
+                                  </button>
+                                  {!isPresetSurfaceId(surface.id) ? (
+                                    <button
+                                      type="button"
+                                      className="col-span-2 bg-white py-1.5 hover:bg-red-600 hover:text-white text-red-700"
+                                      onClick={() => {
+                                        if (!window.confirm(tr("删除该自定义 Surface？", "Delete this custom surface?", "Obrisati surface?"))) return;
+                                        setSurfaceDrafts((prev) => {
+                                          const n = { ...prev };
+                                          delete n[surface.id];
+                                          return n;
+                                        });
+                                        setSurfacePlaylist((pl) =>
+                                          pl.filter((p) => p.surface_id !== surface.id).map((p, order) => ({ ...p, order })),
+                                        );
+                                        if (assignedSurface === surface.id) setAssignedSurface("work");
+                                        if (surfaceLayoutEditorId === surface.id) {
+                                          setSurfaceLayoutEditorId("");
+                                          replaceSurfacePreviewImg(null);
+                                        }
+                                        showToast(tr("已删除", "Deleted", "Obrisano"), "success");
+                                      }}
+                                    >
+                                      {tr("删除自定义", "Delete custom", "Obriši")}
+                                    </button>
+                                  ) : null}
                                 </div>
                               </div>
                             );
@@ -3306,6 +3573,86 @@ function ConfigPageInner() {
                         </div>
                       </CardContent>
                     </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">{tr("播放模式", "Playback mode", "Način reprodukcije")}</CardTitle>
+                        <p className="text-xs text-ink-light font-normal mt-1">
+                          {tr(
+                            "single：仅默认 Surface；rotate：按播放列表轮换；scheduled：按日程表。",
+                            "Single: default surface only. Rotate: playlist. Scheduled: time blocks.",
+                            "Single: zadani surface. Rotate: playlist. Scheduled: raspored.",
+                          )}
+                        </p>
+                      </CardHeader>
+                      <CardContent className="flex flex-wrap gap-2">
+                        {(
+                          [
+                            ["single", tr("单一", "Single", "Jedan")],
+                            ["rotate", tr("轮换", "Rotate", "Rotacija")],
+                            ["scheduled", tr("日程", "Scheduled", "Raspored")],
+                          ] as const
+                        ).map(([v, label]) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setSurfacePlaybackMode(v)}
+                            className={`rounded-xl border px-3 py-2 text-sm ${
+                              surfacePlaybackMode === v ? "bg-ink text-white border-ink" : "bg-white text-ink border-ink/20"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">{tr("设备轮换", "Device rotation", "Rotacija uređaja")}</CardTitle>
+                        <p className="text-xs text-ink-light font-normal mt-1">
+                          {tr("启用项按顺序与时长轮换（播放模式为「轮换」时生效）。", "Enabled items rotate in order when playback is Rotate.", "Kad je Rotate, aktivne stavke se izmjenjuju.")}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        <SurfacePlaylistEditor
+                          playlist={surfacePlaylist}
+                          onChange={setSurfacePlaylist}
+                          surfaceOptions={surfaceCatalog.map((s) => ({ id: s.id, name: s.name }))}
+                          tr={tr}
+                        />
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">{tr("每日日程", "Daily schedule", "Dnevni raspored")}</CardTitle>
+                        <p className="text-xs text-ink-light font-normal mt-1">
+                          {tr("仅在播放模式为「日程」时使用；无匹配时回退默认 Surface。", "Used when playback is Scheduled; otherwise falls back to default.", "Za Scheduled; inače zadano.")}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        <SurfaceScheduleEditor
+                          schedule={surfaceSchedule}
+                          onChange={setSurfaceSchedule}
+                          surfaceOptions={surfaceCatalog.map((s) => ({ id: s.id, name: s.name }))}
+                          tr={tr}
+                        />
+                      </CardContent>
+                    </Card>
+
+                    <SurfaceCreateWizard
+                      open={surfaceCreateWizardOpen}
+                      onClose={() => setSurfaceCreateWizardOpen(false)}
+                      presetIds={DEFAULT_SURFACE_LIBRARY.map((p) => p.id)}
+                      duplicateOptions={surfaceCatalog.map((s) => ({ id: s.id, name: s.name }))}
+                      getDefinition={(sid) => {
+                        const hit = surfaceCatalog.find((s) => s.id === sid);
+                        return hit ? hit.definition : null;
+                      }}
+                      tr={tr}
+                      onComplete={onSurfaceWizardComplete}
+                    />
 
                     {surfaceLayoutEditorId ? (
                       <Card>
@@ -3327,13 +3674,13 @@ function ConfigPageInner() {
                                 className="text-xs shrink-0"
                                 onClick={() => setSurfaceLayoutDialogOpen(true)}
                               >
-                                {tr("编辑网格…", "Edit grid…", "Uredi mrežu…")}
+                                {tr("编辑版面…", "Edit layout…", "Uredi raspored…")}
                               </Button>
                             ) : null}
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                          <div className="rounded-sm border border-ink/15 bg-paper-dark/40 p-3 w-full min-h-[280px]">
+                          <div className="rounded-2xl border border-ink/8 bg-linear-to-b from-[#fafafa] to-[#f0f0f2] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] w-full min-h-[280px]">
                             <div
                               className="h-full w-full"
                               style={
@@ -3349,8 +3696,13 @@ function ConfigPageInner() {
                                       ? (layoutEditorSurfaceDefinition.layout as Array<Record<string, unknown>>)
                                       : [];
                                     const block = layoutBlocks.find((b) => String(b.slot_id || "") === slotId);
-                                    const mid = resolveSurfaceSlotMode(slot);
-                                    const wname = modeMeta[mid]?.name || customModeMeta[mid]?.name || mid;
+                                    const slotRec = slot as unknown as Record<string, unknown>;
+                                    const mid =
+                                      resolveSurfaceSlotMode(slotRec) ||
+                                      resolveSurfaceSlotMode(block || undefined);
+                                    const wname = mid
+                                      ? modeMeta[mid]?.name || customModeMeta[mid]?.name || mid
+                                      : tr("分配模式", "Assign mode", "Dodijeli mod");
                                     const memoHint =
                                       mid === "MEMO" &&
                                       block &&
@@ -3374,7 +3726,7 @@ function ConfigPageInner() {
                                           gridColumn: `${Number(slot.x ?? 0) + 1} / span ${Number(slot.w ?? 1)}`,
                                           gridRow: `${Number(slot.y ?? 0) + 1} / span ${Number(slot.h ?? 1)}`,
                                         }}
-                                        className="min-h-[48px] min-w-0 rounded-md border border-ink/20 bg-white px-3 py-2 text-left text-sm shadow-[2px_2px_0_0_rgba(0,0,0,0.06)] hover:border-ink hover:bg-paper transition-colors"
+                                        className="min-h-[48px] min-w-0 rounded-2xl border border-ink/9 bg-white/95 px-3 py-2.5 text-left text-sm text-ink shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_10px_-3px_rgba(0,0,0,0.07),inset_0_1px_0_rgba(255,255,255,0.95)] transition-[box-shadow,border-color,transform] duration-200 ease-out hover:border-ink/16 hover:shadow-[0_4px_14px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-px active:translate-y-0"
                                       >
                                         <div className="text-[10px] font-medium uppercase tracking-wide text-ink-light mb-0.5">
                                           {st}
@@ -3390,7 +3742,9 @@ function ConfigPageInner() {
                                 : (["top", "middle", "bottom"] as const).map((slot) => {
                                     const item = surfaceEditorSlotItems[slot];
                                     const mid = resolveSurfaceSlotMode(item);
-                                    const wname = modeMeta[mid]?.name || customModeMeta[mid]?.name || mid;
+                                    const wname = mid
+                                      ? modeMeta[mid]?.name || customModeMeta[mid]?.name || mid
+                                      : tr("分配模式", "Assign mode", "Dodijeli mod");
                                     const memoHint =
                                       mid === "MEMO" && item && typeof item.memo_text === "string" && item.memo_text.trim()
                                         ? item.memo_text.trim().slice(0, 48) + (item.memo_text.length > 48 ? "…" : "")
@@ -3405,7 +3759,7 @@ function ConfigPageInner() {
                                           openSurfaceSlotModal(surfaceLayoutEditorId, { type: "legacy", position: slot })
                                         }
                                         style={area ? { gridArea: area } : undefined}
-                                        className="min-h-[48px] rounded-md border border-ink/20 bg-white px-3 py-2 text-left text-sm shadow-[2px_2px_0_0_rgba(0,0,0,0.06)] hover:border-ink hover:bg-paper transition-colors"
+                                        className="min-h-[48px] rounded-2xl border border-ink/9 bg-white/95 px-3 py-2.5 text-left text-sm text-ink shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_10px_-3px_rgba(0,0,0,0.07),inset_0_1px_0_rgba(255,255,255,0.95)] transition-[box-shadow,border-color,transform] duration-200 ease-out hover:border-ink/16 hover:shadow-[0_4px_14px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-px active:translate-y-0"
                                       >
                                         <div className="text-[10px] font-medium uppercase tracking-wide text-ink-light mb-0.5">
                                           {wname}
@@ -3468,7 +3822,7 @@ function ConfigPageInner() {
                               return (
                                 <div
                                   key={mid}
-                                  className="flex h-[118px] flex-col overflow-hidden rounded-sm border border-ink/10 bg-white shadow-[2px_2px_0_0_rgba(0,0,0,0.04)]"
+                                  className="flex h-[118px] flex-col overflow-hidden rounded-xl border border-ink/10 bg-white shadow-[2px_2px_0_0_rgba(0,0,0,0.04)]"
                                 >
                                   <button
                                     type="button"
@@ -3497,7 +3851,7 @@ function ConfigPageInner() {
                                 onChange={(e) => setSurfaceSlotModalMemo(e.target.value)}
                                 rows={3}
                                 placeholder={tr("例如：今日重点", "e.g. Today’s focus", "npr. Fokus dana")}
-                                className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white resize-y"
+                                className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white resize-y"
                               />
                             </div>
                           ) : null}
@@ -3525,6 +3879,25 @@ function ConfigPageInner() {
                   </div>
 
                   <div ref={surfacePanelRef} className="min-w-0">
+                    <p className="text-[11px] text-ink-light mb-2 leading-relaxed">
+                      {surfacePlaybackMode === "single"
+                        ? tr(
+                            `默认 Surface：${assignedSurface || "—"}`,
+                            `Default surface: ${assignedSurface || "—"}`,
+                            `Zadani surface: ${assignedSurface || "—"}`,
+                          )
+                        : surfacePlaybackMode === "rotate"
+                          ? tr(
+                              `轮换预览（模拟当前）：${simulatedPreviewSurfaceId}`,
+                              `Rotate preview (simulated now): ${simulatedPreviewSurfaceId}`,
+                              `Rotacija (simulacija): ${simulatedPreviewSurfaceId}`,
+                            )
+                          : tr(
+                              `日程预览（模拟当前）：${simulatedPreviewSurfaceId}`,
+                              `Schedule preview (simulated now): ${simulatedPreviewSurfaceId}`,
+                              `Raspored (simulacija): ${simulatedPreviewSurfaceId}`,
+                            )}
+                    </p>
                     <EInkPreviewPanel
                       tr={tr}
                       previewModeLabel={activeSurfaceDisplayName}
@@ -3572,7 +3945,7 @@ function ConfigPageInner() {
                       <button
                         type="button"
                         onClick={() => setDeviceRenderMode("mode")}
-                        className={`rounded-sm border px-3 py-2 text-sm ${
+                        className={`rounded-xl border px-3 py-2 text-sm ${
                           deviceRenderMode === "mode" ? "bg-ink text-white border-ink" : "bg-white text-ink border-ink/20"
                         }`}
                       >
@@ -3581,7 +3954,7 @@ function ConfigPageInner() {
                       <button
                         type="button"
                         onClick={() => setDeviceRenderMode("surface")}
-                        className={`rounded-sm border px-3 py-2 text-sm ${
+                        className={`rounded-xl border px-3 py-2 text-sm ${
                           deviceRenderMode === "surface" ? "bg-ink text-white border-ink" : "bg-white text-ink border-ink/20"
                         }`}
                       >
@@ -3670,7 +4043,7 @@ function ConfigPageInner() {
                       </div>
                     ) : null}
 
-                    <div className="rounded-sm border border-ink/10 bg-paper p-3 text-sm text-ink-light">
+                    <div className="rounded-xl border border-ink/10 bg-paper p-3 text-sm text-ink-light">
                       {tr(
                         "提示：保留免费额度机制；一旦你配置自己的 API Key，系统会优先使用你的 Key。",
                         "Note: free quota remains available; once you configure your own API key, your key is used with priority.",
@@ -3712,16 +4085,26 @@ function ConfigPageInner() {
                     </Field>
 
                     <Field label={tr("模型名称", "Model Name", "Naziv modela")}>
-                      <input
-                        value={apiModelDraft}
-                        onChange={(e) => setApiModelDraft(e.target.value)}
-                        placeholder={
-                          llmAccessModeDraft === "custom_openai"
-                            ? "gpt-4o-mini"
-                            : "deepseek-chat"
-                        }
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
-                      />
+                      {(() => {
+                        const opts = [...modelsForConfigApiKeysTab(llmAccessModeDraft)];
+                        const t = apiModelDraft.trim();
+                        const orphan = t.length > 0 && !opts.includes(t);
+                        const selectValue = orphan ? apiModelDraft : opts.includes(t) ? t : opts[0];
+                        return (
+                          <select
+                            value={selectValue}
+                            onChange={(e) => setApiModelDraft(e.target.value)}
+                            className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
+                          >
+                            {orphan ? <option value={apiModelDraft}>{apiModelDraft}</option> : null}
+                            {opts.map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })()}
                     </Field>
 
                     {llmAccessModeDraft === "custom_openai" && (
@@ -3730,7 +4113,7 @@ function ConfigPageInner() {
                           value={apiBaseUrlDraft}
                           onChange={(e) => setApiBaseUrlDraft(e.target.value)}
                           placeholder="https://api.openai.com/v1"
-                          className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                          className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                         />
                       </Field>
                     )}
@@ -3742,7 +4125,7 @@ function ConfigPageInner() {
                           value={apiKeyDraft}
                           onChange={(e) => setApiKeyDraft(e.target.value)}
                           placeholder={tr("输入你的 API Key", "Enter your API key", "Unesi svoj API ključ")}
-                          className="w-full rounded-sm border border-ink/20 px-3 py-2 pr-10 text-sm bg-white font-mono"
+                          className="w-full rounded-xl border border-ink/20 px-3 py-2 pr-10 text-sm bg-white font-mono"
                         />
                         <button
                           type="button"
@@ -3802,7 +4185,7 @@ function ConfigPageInner() {
                           value={shareUsernameInput}
                           onChange={(e) => setShareUsernameInput(e.target.value)}
                           placeholder={tr("输入要共享的用户名", "Enter username to share", "Unesi korisničko ime za dijeljenje")}
-                          className="flex-1 min-w-[220px] rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                          className="flex-1 min-w-[220px] rounded-xl border border-ink/20 px-3 py-2 text-sm"
                         />
                         <Button variant="outline" size="sm" onClick={handleShareDevice} disabled={!shareUsernameInput.trim()}>
                           {tr("分享", "Share", "Podijeli")}
@@ -3815,7 +4198,7 @@ function ConfigPageInner() {
                       ) : (
                         <div className="space-y-2">
                           {deviceMembers.map((member) => (
-                            <div key={member.user_id} className="flex items-center justify-between rounded-sm border border-ink/10 p-2 text-sm">
+                            <div key={member.user_id} className="flex items-center justify-between rounded-xl border border-ink/10 p-2 text-sm">
                               <div>
                                 <p className="font-medium text-ink">{member.username}</p>
                                 <p className="text-xs text-ink-light">{member.role === "owner" ? "Owner" : "Member"}</p>
@@ -3832,7 +4215,7 @@ function ConfigPageInner() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="p-3 rounded-sm border border-ink/10 bg-paper text-sm text-ink-light">
+                  <div className="p-3 rounded-xl border border-ink/10 bg-paper text-sm text-ink-light">
                     {tr("只有设备 Owner 可以管理共享成员。", "Only the device owner can manage sharing.", "Samo vlasnik uređaja može upravljati dijeljenjem.")}
                   </div>
                 )}
@@ -3844,7 +4227,7 @@ function ConfigPageInner() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       {pendingRequests.filter((item) => item.mac === mac).map((item) => (
-                        <div key={item.id} className="flex items-center justify-between gap-2 rounded-sm border border-ink/10 p-2 text-sm">
+                        <div key={item.id} className="flex items-center justify-between gap-2 rounded-xl border border-ink/10 p-2 text-sm">
                           <div>
                             <p className="font-medium text-ink">{item.requester_username}</p>
                             <p className="text-xs text-ink-light">{tr("请求绑定此设备", "Requested to bind this device", "Zatraženo je vezanje ovog uređaja")}</p>
@@ -3950,7 +4333,7 @@ function ConfigPageInner() {
                         `Leave empty to use global default: ${describeLocation(currentLocation) || defaultCityName}`,
                         `Ostavi prazno za globalnu zadanu lokaciju: ${describeLocation(currentLocation) || "Zagreb"}`,
                       )}
-                      className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                      className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                     />
                   </Field>
                   {activeModeSchema.map((item) => {
@@ -3982,7 +4365,7 @@ function ConfigPageInner() {
                                   updateModeOverride(settingsMode, { [item.key]: next });
                                 }}
                                 placeholder={tr("事件名", "Event name", "Naziv događaja")}
-                                className="flex-1 rounded-sm border border-ink/20 px-3 py-1.5 text-sm"
+                                className="flex-1 rounded-xl border border-ink/20 px-3 py-1.5 text-sm"
                               />
                               <input
                                 type="date"
@@ -3992,7 +4375,7 @@ function ConfigPageInner() {
                                   next[i] = { ...next[i], date: e.target.value };
                                   updateModeOverride(settingsMode, { [item.key]: next });
                                 }}
-                                className="rounded-sm border border-ink/20 px-3 py-1.5 text-sm"
+                                className="rounded-xl border border-ink/20 px-3 py-1.5 text-sm"
                               />
                               <select
                                 value={ev.type}
@@ -4001,7 +4384,7 @@ function ConfigPageInner() {
                                   next[i] = { ...next[i], type: e.target.value === "countup" ? "countup" : "countdown" };
                                   updateModeOverride(settingsMode, { [item.key]: next });
                                 }}
-                                className="rounded-sm border border-ink/20 px-2 py-1.5 text-sm bg-white"
+                                className="rounded-xl border border-ink/20 px-2 py-1.5 text-sm bg-white"
                               >
                                 <option value="countdown">{tr("倒计时", "Countdown", "Odbrojavanje")}</option>
                                 <option value="countup">{tr("正计时", "Count up", "Brojanje prema gore")}</option>
@@ -4068,7 +4451,7 @@ function ConfigPageInner() {
                             }}
                             rows={4}
                             placeholder={item.placeholder}
-                            className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm font-mono"
+                            className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm font-mono"
                           />
                           {settingsJsonErrors[key] ? (
                             <p className="mt-1 text-xs text-red-600">{settingsJsonErrors[key]}</p>
@@ -4092,7 +4475,7 @@ function ConfigPageInner() {
                             }}
                             rows={3}
                             placeholder={item.placeholder}
-                            className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                            className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                           />
                         </Field>
                       );
@@ -4115,7 +4498,7 @@ function ConfigPageInner() {
                               }
                               updateModeOverride(settingsMode, { [item.key]: Number(v) });
                             }}
-                            className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                            className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                           />
                         </Field>
                       );
@@ -4144,7 +4527,7 @@ function ConfigPageInner() {
                           <select
                             value={current}
                             onChange={(e) => updateModeOverride(settingsMode, { [item.key]: e.target.value })}
-                            className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                            className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                           >
                             {options.map((opt) => (
                               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -4160,7 +4543,7 @@ function ConfigPageInner() {
                           value={typeof rawValue === "string" ? rawValue : ""}
                           onChange={(e) => updateModeOverride(settingsMode, { [item.key]: e.target.value })}
                           placeholder={item.placeholder}
-                          className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                          className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                         />
                       </Field>
                     );
@@ -4227,7 +4610,7 @@ function ConfigPageInner() {
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="rounded-sm border border-ink/20 bg-white px-3 py-2 text-xs font-mono break-all">
+            <div className="rounded-xl border border-ink/20 bg-white px-3 py-2 text-xs font-mono break-all">
               {focusAlertToken || tr("（空）", "(empty)", "(prazno)")}
             </div>
             <div className="flex items-center justify-end gap-2">
@@ -4338,7 +4721,7 @@ function ConfigPageInner() {
                     )}
               </p>
               {currentUserRole === "member" ? (
-                <div className="rounded-sm border border-amber-200 bg-amber-50 px-3 py-2">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
                   <p className="text-xs leading-5 text-amber-800">
                     {tr(
                       "Member 免费额度仅用于无设备预览，不用于设备端生成。",
@@ -4349,7 +4732,7 @@ function ConfigPageInner() {
                 </div>
               ) : (
                 <>
-                  <div className="p-3 rounded-sm border border-ink/20 bg-paper-dark">
+                  <div className="p-3 rounded-xl border border-ink/20 bg-paper-dark">
                     <p className="text-xs text-ink-light mb-2">
                       {tr(
                         "提示：如果您有自己的 API key，可以在个人信息中配置，这样就不会受到额度限制了。",
@@ -4379,7 +4762,7 @@ function ConfigPageInner() {
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value)}
                       placeholder={tr("请输入邀请码", "Enter invitation code", "Unesi kod pozivnice")}
-                      className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                      className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !redeemingInvite) {
@@ -4439,7 +4822,7 @@ function ConfigPageInner() {
       {paramModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setParamModal(null)} />
-          <div className="relative w-[min(520px,calc(100vw-32px))] rounded-sm border border-ink/15 bg-white shadow-xl">
+          <div className="relative w-[min(520px,calc(100vw-32px))] rounded-xl border border-ink/15 bg-white shadow-xl">
             <div className="px-4 py-3 border-b border-ink/10 flex items-center justify-between">
               <div className="text-sm font-semibold text-ink">
                 {paramModal.type === "quote"
@@ -4477,13 +4860,13 @@ function ConfigPageInner() {
                     value={quoteDraft}
                     onChange={(e) => setQuoteDraft(e.target.value)}
                     placeholder={tr("输入语录内容...", "Type your quote...", "Upiši svoj citat...")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm min-h-28 bg-white"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm min-h-28 bg-white"
                   />
                   <input
                     value={authorDraft}
                     onChange={(e) => setAuthorDraft(e.target.value)}
                     placeholder={tr("作者（可选）", "Author (optional)", "Autor (opcionalno)")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                     <Button
@@ -4526,7 +4909,7 @@ function ConfigPageInner() {
                     locale={locale}
                     placeholder={tr("输入地点名称（如：上海、巴黎、Singapore）", "Enter a place name (e.g. Shanghai, Paris, Singapore)", "Upiši naziv mjesta (npr. Zagreb, Pariz, Singapore)")}
                     helperText={tr("建议从候选列表中点选具体地点。", "Pick a precise result from the suggestion list.", "Odaberi precizan rezultat s liste prijedloga.")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                     autoFocus
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
@@ -4562,7 +4945,7 @@ function ConfigPageInner() {
                     value={memoDraft}
                     onChange={(e) => setMemoDraft(e.target.value)}
                     placeholder={tr("输入便签内容...", "Enter memo content...", "Unesi sadržaj bilješke...")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm min-h-32 bg-white"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm min-h-32 bg-white"
                     autoFocus
                   />
                   <div className="flex justify-end pt-2">
@@ -4596,7 +4979,7 @@ function ConfigPageInner() {
                         value={countdownName}
                         onChange={(e) => setCountdownName(e.target.value)}
                         placeholder={tr("例如：元旦、生日", "e.g., New Year, Birthday", "npr. Nova godina, rođendan")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       />
                     </div>
                     <div>
@@ -4607,7 +4990,7 @@ function ConfigPageInner() {
                         type="date"
                         value={countdownDate}
                         onChange={(e) => setCountdownDate(e.target.value)}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       />
                     </div>
                   </div>
@@ -4670,7 +5053,7 @@ function ConfigPageInner() {
                             next[idx] = { ...next[idx], name: e.target.value };
                             setHabitItems(next);
                           }}
-                          className="flex-1 rounded-sm border border-ink/20 px-3 py-1.5 text-sm bg-white"
+                          className="flex-1 rounded-xl border border-ink/20 px-3 py-1.5 text-sm bg-white"
                         />
                         <button
                           onClick={() => setHabitItems(habitItems.filter((_, i) => i !== idx))}
@@ -4684,7 +5067,7 @@ function ConfigPageInner() {
                   </div>
                   <button
                     onClick={() => setHabitItems([...habitItems, { name: "", done: false }])}
-                    className="w-full mt-2 px-3 py-2 rounded-sm border border-dashed border-ink/20 text-sm text-ink-light hover:text-ink hover:border-ink/40 transition-colors"
+                    className="w-full mt-2 px-3 py-2 rounded-xl border border-dashed border-ink/20 text-sm text-ink-light hover:text-ink hover:border-ink/40 transition-colors"
                   >
                     + {tr("添加习惯", "Add Habit", "Dodaj naviku")}
                   </button>
@@ -4726,7 +5109,7 @@ function ConfigPageInner() {
                         onChange={(e) => setUserAge(parseInt(e.target.value) || 0)}
                         min="0"
                         max="120"
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       />
                     </div>
                     <div>
@@ -4736,7 +5119,7 @@ function ConfigPageInner() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setLifeExpectancy(100)}
-                          className={`flex-1 px-3 py-2 rounded-sm text-sm transition-colors ${
+                          className={`flex-1 px-3 py-2 rounded-xl text-sm transition-colors ${
                             lifeExpectancy === 100
                               ? "bg-ink text-white"
                               : "bg-paper-dark text-ink hover:bg-ink/10"
@@ -4746,7 +5129,7 @@ function ConfigPageInner() {
                         </button>
                         <button
                           onClick={() => setLifeExpectancy(120)}
-                          className={`flex-1 px-3 py-2 rounded-sm text-sm transition-colors ${
+                          className={`flex-1 px-3 py-2 rounded-xl text-sm transition-colors ${
                             lifeExpectancy === 120
                               ? "bg-ink text-white"
                               : "bg-paper-dark text-ink hover:bg-ink/10"
@@ -4878,7 +5261,7 @@ function ConfigPageInner() {
                         value={bf6UsernameDraft}
                         onChange={(e) => setBf6UsernameDraft(e.target.value)}
                         placeholder={tr("例如：shroud", "e.g. shroud", "npr. shroud")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                         autoFocus
                       />
                     </div>
@@ -4889,7 +5272,7 @@ function ConfigPageInner() {
                       <select
                         value={bf6PlatformDraft}
                         onChange={(e) => setBf6PlatformDraft(e.target.value)}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       >
                         <option value="pc">PC</option>
                         <option value="xbox">Xbox (generic)</option>
@@ -4938,7 +5321,7 @@ function ConfigPageInner() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-sm text-sm font-medium shadow-lg animate-fade-in ${
+        <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg animate-fade-in ${
           toast.type === "success" ? "bg-green-50 text-green-800 border border-green-200"
           : toast.type === "error" ? "bg-red-50 text-red-800 border border-red-200"
           : "bg-amber-50 text-amber-800 border border-amber-200"

@@ -46,7 +46,7 @@ export function StatCard({
   value: string | number;
 }) {
   return (
-    <div className="p-3 rounded-sm border border-ink/10 bg-paper">
+    <div className="p-3 rounded-xl border border-ink/10 bg-paper">
       <div className="text-xs text-ink-light">{label}</div>
       <div className="text-lg font-semibold text-ink mt-1">{value}</div>
     </div>

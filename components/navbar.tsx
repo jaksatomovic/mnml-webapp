@@ -90,14 +90,14 @@ export function Navbar() {
   // (depends on client-side token/cookie). Render a stable placeholder until mounted.
   if (!hydrated) {
     return (
-      <header className="sticky top-0 z-40 w-full border-b border-ink/10 bg-white/80 backdrop-blur-md">
+      <header className="sticky top-0 z-40 w-full border-b border-ink/[0.07] bg-white/72 backdrop-blur-xl supports-backdrop-filter:bg-white/65">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6" />
       </header>
     );
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-ink/10 bg-white/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-ink/[0.07] bg-white/72 backdrop-blur-xl supports-backdrop-filter:bg-white/65 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href={withLocalePath(locale, "/")} className="flex items-center gap-2 group">
           <Image 
@@ -105,7 +105,7 @@ export function Navbar() {
             alt="InkSight Logo" 
             width={32} 
             height={32} 
-            className="rounded-sm object-contain"
+            className="rounded-[10px] object-contain shadow-sm ring-1 ring-black/4"
           />
           <span className="text-lg font-semibold text-ink tracking-tight">
             InkSight
@@ -118,7 +118,7 @@ export function Navbar() {
             <Link
               key={link.href}
               href={withLocalePath(locale, link.href)}
-              className="text-sm text-ink-light hover:text-ink transition-colors"
+              className="text-sm text-ink-light hover:text-ink transition-colors duration-200 rounded-lg px-1 -mx-1 py-0.5 hover:bg-ink/5"
             >
               {link.label}
             </Link>
@@ -127,14 +127,14 @@ export function Navbar() {
             href="https://github.com/datascale-ai/inksight"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-ink-light hover:text-ink transition-colors"
+            className="rounded-lg p-1 text-ink-light hover:text-ink hover:bg-ink/5 transition-colors duration-200"
           >
             <Github size={18} />
           </a>
           {username ? (
             <UserDropdown locale={locale} username={username} onLogout={handleLogout} />
           ) : (
-            <Link href={withLocalePath(locale, "/login")} className="text-sm text-ink-light hover:text-ink transition-colors">
+            <Link href={withLocalePath(locale, "/login")} className="text-sm text-ink-light hover:text-ink transition-colors duration-200 rounded-lg px-2 py-1 hover:bg-ink/5">
               {t(locale, "nav.login")}
             </Link>
           )}
@@ -147,7 +147,7 @@ export function Navbar() {
           >
             <button
               type="button"
-              className="text-ink-light hover:text-ink transition-colors"
+              className="rounded-lg p-1 text-ink-light hover:text-ink hover:bg-ink/5 transition-colors duration-200"
               aria-haspopup="menu"
               aria-expanded={languageMenu.open}
               aria-label={languageLabel}
@@ -157,7 +157,7 @@ export function Navbar() {
             </button>
             {languageMenu.open && (
               <div
-                className="absolute right-0 top-[calc(100%+8px)] z-[100] min-w-36 rounded-lg border border-ink/10 bg-white p-2 shadow-lg"
+                className="absolute right-0 top-[calc(100%+8px)] z-[100] min-w-36 rounded-2xl border border-ink/10 bg-white/95 p-2 shadow-[0_8px_30px_-8px_rgba(0,0,0,0.15),0_0_0_1px_rgba(0,0,0,0.04)] backdrop-blur-xl"
                 role="menu"
                 onMouseEnter={languageMenu.openMenu}
                 onMouseLeave={languageMenu.scheduleClose}
@@ -166,10 +166,10 @@ export function Navbar() {
                   <Link
                     key={item.locale}
                     href={localeHref(item.locale)}
-                    className={`block rounded-md px-2 py-2 text-sm transition-colors ${
+                    className={`block rounded-xl px-2 py-2 text-sm transition-colors duration-200 ${
                       locale === item.locale
-                        ? "bg-paper-dark text-ink"
-                        : "text-ink-light hover:bg-gray-50 hover:text-ink"
+                        ? "bg-ink/7 text-ink font-medium"
+                        : "text-ink-light hover:bg-ink/5 hover:text-ink"
                     }`}
                     role="menuitem"
                     onClick={languageMenu.closeMenu}
@@ -194,7 +194,7 @@ export function Navbar() {
 
       {/* Mobile nav */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-ink/10 bg-white">
+        <div className="md:hidden border-t border-ink/[0.07] bg-white/95 backdrop-blur-xl">
           <div className="flex flex-col px-6 py-4 space-y-3">
             {navLinks.map((link) => (
               <Link

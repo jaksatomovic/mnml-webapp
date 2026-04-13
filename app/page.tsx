@@ -333,7 +333,7 @@ export default async function Home() {
 
             {/* Product Image */}
             <div className="flex items-center justify-center animate-fade-in">
-              <div className="relative w-full max-w-md aspect-[4/3] rounded-sm border border-ink/10 overflow-hidden">
+              <div className="relative w-full max-w-md aspect-[4/3] rounded-xl border border-ink/10 overflow-hidden">
                 <Image
                   src={locale === "zh" ? "/images/intro.jpg" : "/images/intro_eng.jpg"}
                   alt={tr("墨鱼AI墨水屏展示图", "InkSight product preview", "Pregled InkSight uređaja")}
@@ -379,7 +379,7 @@ export default async function Home() {
             ].map((feature) => (
               <Card key={feature.title} className="p-8 text-center group hover:border-ink/20 transition-colors">
                 <CardContent className="p-0">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm border border-ink/10 mb-5 group-hover:border-ink/30 transition-colors">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl border border-ink/10 mb-5 group-hover:border-ink/30 transition-colors">
                     <feature.icon size={22} className="text-ink" />
                   </div>
                   <h3 className="text-lg font-semibold text-ink mb-2">
@@ -413,7 +413,7 @@ export default async function Home() {
                 <Card className="group h-full p-3 md:p-4 hover:border-ink/20 transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="h-full p-0 text-center flex flex-col items-center">
                     <div>
-                      <div className="inline-flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-sm bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
+                      <div className="inline-flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-xl bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
                         <mode.icon size={16} />
                       </div>
                       <h4 className="text-[10px] md:text-[11px] font-semibold text-ink tracking-wider uppercase mb-1">
@@ -447,7 +447,7 @@ export default async function Home() {
               <div key={mode.name} className="aspect-square">
                 <Card className="group h-full p-3 md:p-4 hover:border-ink/20 transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="h-full p-0 text-center flex flex-col items-center">
-                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-sm bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
+                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
                       <mode.icon size={16} />
                     </div>
                     <h4 className="text-[9px] md:text-[10px] font-semibold text-ink tracking-wider uppercase mb-1">
@@ -464,7 +464,7 @@ export default async function Home() {
             <div className="aspect-square md:aspect-auto md:row-span-2 md:col-span-2 md:col-start-9 md:row-start-1">
               <Card className="group h-full p-3 md:p-4 border-dashed hover:border-ink/30 transition-all duration-200 hover:-translate-y-0.5">
                 <CardContent className="h-full p-0 text-center flex flex-col items-center justify-center">
-                  <div className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-sm border border-ink/20 mb-2.5 group-hover:bg-ink group-hover:text-white group-hover:border-ink transition-colors">
+                  <div className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl border border-ink/20 mb-2.5 group-hover:bg-ink group-hover:text-white group-hover:border-ink transition-colors">
                     <Plus size={18} />
                   </div>
                   <h4 className="text-[10px] md:text-xs font-semibold text-ink tracking-wider uppercase mb-1">
@@ -484,7 +484,7 @@ export default async function Home() {
               <div key={mode.name} className="aspect-square">
                 <Card className="group h-full p-3 md:p-4 hover:border-ink/20 transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="h-full p-0 text-center flex flex-col items-center">
-                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-sm bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
+                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
                       <mode.icon size={16} />
                     </div>
                     <h4 className="text-[9px] md:text-[10px] font-semibold text-ink tracking-wider uppercase mb-1">
@@ -515,7 +515,7 @@ export default async function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {specsLocalized.map((spec) => (
               <div key={spec.label} className="text-center p-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm border border-white/20 mb-4">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl border border-white/20 mb-4">
                   <spec.icon size={22} className="text-white/80" />
                 </div>
                 <h4 className="text-base font-semibold mb-1">{spec.label}</h4>

@@ -51,7 +51,7 @@ async function Sidebar() {
               <li key={item.href}>
                 <Link
                   href={withLocalePath(locale, item.href)}
-                  className="block px-3 py-1.5 text-sm text-ink-muted rounded-sm hover:text-ink hover:bg-ink/[0.04] transition-colors"
+                  className="block px-3 py-1.5 text-sm text-ink-muted rounded-xl hover:text-ink hover:bg-ink/[0.04] transition-colors"
                 >
                   {t(locale, item.labelKey)}
                 </Link>

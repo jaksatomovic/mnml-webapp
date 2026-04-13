@@ -57,7 +57,7 @@ function ModeSection({
 
   return (
     <div className="mb-6">
-      <div className="flex items-center justify-between gap-2 mb-3 rounded-sm bg-paper-dark border border-ink/10 px-3 py-2">
+      <div className="flex items-center justify-between gap-2 mb-3 rounded-xl bg-paper-dark border border-ink/10 px-3 py-2">
         <h4 className="text-base font-semibold text-ink">{title}</h4>
         {collapsible ? (
           <button
@@ -78,7 +78,7 @@ function ModeSection({
             const meta = customMeta?.[m] || { name: m, tip: "" };
             const isCurrent = currentMode === m;
             return (
-              <div key={m} className="rounded-sm border border-ink/10 bg-white overflow-hidden">
+              <div key={m} className="rounded-xl border border-ink/10 bg-white overflow-hidden">
                 <button
                   onClick={() => onPreview(m)}
                   className={`w-full px-3 py-2 text-left transition-colors min-h-[64px] flex flex-col justify-center ${
@@ -682,7 +682,7 @@ export default function ExperiencePage() {
                     setCustomJson("");
                     setCustomGenerating(false);
                   }}
-                  className="rounded-sm border border-dashed border-ink/20 bg-white px-3 py-2 text-sm flex items-center gap-2 text-ink-light hover:border-ink/40 hover:bg-paper-dark transition-colors"
+                  className="rounded-xl border border-dashed border-ink/20 bg-white px-3 py-2 text-sm flex items-center gap-2 text-ink-light hover:border-ink/40 hover:bg-paper-dark transition-colors"
                   title={tr("新建自定义模式", "Create custom mode", "Izradi prilagođeni mod")}
                 >
                   <Plus size={16} />
@@ -692,7 +692,7 @@ export default function ExperiencePage() {
             </CardHeader>
             <CardContent>
               {modesError ? (
-                <div className="mb-4 p-3 rounded-sm border border-amber-200 bg-amber-50 text-amber-800 text-sm">
+                <div className="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm">
                   <AlertCircle size={16} className="inline mr-2" />
                   {modesError}
                 </div>
@@ -744,7 +744,7 @@ export default function ExperiencePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="h-[calc(80vh-220px)] flex flex-col p-0">
-              <div className="border border-ink/10 rounded-sm bg-paper flex flex-col items-center justify-center flex-1 w-full">
+              <div className="border border-ink/10 rounded-xl bg-paper flex flex-col items-center justify-center flex-1 w-full">
                 {previewLoading ? (
                   <div className="flex items-center justify-center w-full">
                     <div className="text-center">
@@ -754,7 +754,7 @@ export default function ExperiencePage() {
                   </div>
                 ) : previewImageUrl ? (
                   <div className="flex flex-col items-center gap-2 w-full">
-                    <div className="relative w-full max-w-md aspect-[4/3] bg-white border border-ink/20 rounded-sm overflow-hidden">
+                    <div className="relative w-full max-w-md aspect-[4/3] bg-white border border-ink/20 rounded-xl overflow-hidden">
                       <Image
                         src={previewImageUrl}
                         alt={t(locale, "preview.display.alt", "InkSight preview")}
@@ -802,7 +802,7 @@ export default function ExperiencePage() {
 
       {toast ? (
         <div
-          className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-sm text-sm font-medium shadow-lg animate-fade-in ${
+          className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg animate-fade-in ${
             toast.type === "success"
               ? "bg-green-50 text-green-800 border border-green-200"
               : toast.type === "error"
@@ -817,7 +817,7 @@ export default function ExperiencePage() {
       {modal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setModal(null)} />
-          <div className="relative w-[min(520px,calc(100vw-32px))] rounded-sm border border-ink/15 bg-white shadow-xl">
+          <div className="relative w-[min(520px,calc(100vw-32px))] rounded-xl border border-ink/15 bg-white shadow-xl">
             <div className="px-4 py-3 border-b border-ink/10 flex items-center justify-between">
               <div className="text-sm font-semibold text-ink">
                 {modal.type === "quote"
@@ -852,13 +852,13 @@ export default function ExperiencePage() {
                     value={quoteDraft}
                     onChange={(e) => setQuoteDraft(e.target.value)}
                     placeholder={t(locale, "preview.modal.quote.placeholder", "Type your quote...")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm min-h-28 bg-white"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm min-h-28 bg-white"
                   />
                   <input
                     value={authorDraft}
                     onChange={(e) => setAuthorDraft(e.target.value)}
                     placeholder={t(locale, "preview.modal.quote.author_placeholder", "Author (optional)")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                     <Button
@@ -901,7 +901,7 @@ export default function ExperiencePage() {
                     locale={locale}
                     placeholder={tr("输入地点名称（如：上海、巴黎、Singapore）", "Enter a place name (e.g. Shanghai, Paris, Singapore)", "Upiši naziv mjesta (npr. Zagreb, Pariz, Singapore)")}
                     helperText={tr("建议从候选列表中点选。", "Pick a result from the suggestion list.", "Odaberi rezultat s popisa prijedloga.")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                     autoFocus
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
@@ -940,7 +940,7 @@ export default function ExperiencePage() {
                     value={memoDraft}
                     onChange={(e) => setMemoDraft(e.target.value)}
                     placeholder={tr("输入便签内容...", "Enter memo content...", "Unesi sadržaj bilješke...")}
-                    className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm min-h-32 bg-white"
+                    className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm min-h-32 bg-white"
                     autoFocus
                   />
                   <div className="flex justify-end pt-2">
@@ -975,7 +975,7 @@ export default function ExperiencePage() {
                         value={countdownName}
                         onChange={(e) => setCountdownName(e.target.value)}
                         placeholder={tr("例如：元旦、生日", "e.g., New Year, Birthday", "npr. Nova godina, rođendan")}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       />
                     </div>
                     <div>
@@ -986,7 +986,7 @@ export default function ExperiencePage() {
                         type="date"
                         value={countdownDate}
                         onChange={(e) => setCountdownDate(e.target.value)}
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       />
                     </div>
                   </div>
@@ -1049,7 +1049,7 @@ export default function ExperiencePage() {
                             setHabitItems(newItems);
                           }}
                           placeholder={tr("习惯名称", "Habit name", "Naziv navike")}
-                          className="flex-1 rounded-sm border border-ink/20 px-3 py-1.5 text-sm bg-white"
+                          className="flex-1 rounded-xl border border-ink/20 px-3 py-1.5 text-sm bg-white"
                         />
                         <button
                           onClick={() => {
@@ -1068,7 +1068,7 @@ export default function ExperiencePage() {
                     onClick={() => {
                       setHabitItems([...habitItems, { name: "", done: false }]);
                     }}
-                    className="w-full mt-2 px-3 py-2 rounded-sm border border-dashed border-ink/20 text-sm text-ink-light hover:text-ink hover:border-ink/40 transition-colors"
+                    className="w-full mt-2 px-3 py-2 rounded-xl border border-dashed border-ink/20 text-sm text-ink-light hover:text-ink hover:border-ink/40 transition-colors"
                   >
                     + {tr("添加习惯", "Add Habit", "Dodaj naviku")}
                   </button>
@@ -1113,7 +1113,7 @@ export default function ExperiencePage() {
                         onChange={(e) => setUserAge(parseInt(e.target.value) || 0)}
                         min="0"
                         max="120"
-                        className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                        className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       />
                     </div>
                     <div>
@@ -1123,7 +1123,7 @@ export default function ExperiencePage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setLifeExpectancy(100)}
-                          className={`flex-1 px-3 py-2 rounded-sm text-sm transition-colors ${
+                          className={`flex-1 px-3 py-2 rounded-xl text-sm transition-colors ${
                             lifeExpectancy === 100
                               ? "bg-ink text-white"
                               : "bg-paper-dark text-ink hover:bg-ink/10"
@@ -1133,7 +1133,7 @@ export default function ExperiencePage() {
                         </button>
                         <button
                           onClick={() => setLifeExpectancy(120)}
-                          className={`flex-1 px-3 py-2 rounded-sm text-sm transition-colors ${
+                          className={`flex-1 px-3 py-2 rounded-xl text-sm transition-colors ${
                             lifeExpectancy === 120
                               ? "bg-ink text-white"
                               : "bg-paper-dark text-ink hover:bg-ink/10"
@@ -1269,13 +1269,13 @@ export default function ExperiencePage() {
                       value={bf6UsernameDraft}
                       onChange={(e) => setBf6UsernameDraft(e.target.value)}
                       placeholder={tr("例如：shroud", "e.g. shroud", "npr. shroud")}
-                      className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                      className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                       autoFocus
                     />
                     <select
                       value={bf6PlatformDraft}
                       onChange={(e) => setBf6PlatformDraft(e.target.value)}
-                      className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+                      className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                     >
                       <option value="pc">PC</option>
                       <option value="xbox">Xbox (generic)</option>
@@ -1325,7 +1325,7 @@ export default function ExperiencePage() {
 
           <div className="space-y-3">
             {customGenerating ? (
-              <div className="rounded-sm border border-ink/10 bg-paper px-3 py-3 text-sm text-ink-light flex items-center gap-2">
+              <div className="rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm text-ink-light flex items-center gap-2">
                 <Loader2 size={16} className="animate-spin" />
                 {tr("模式生成中...", "Generating mode...", "Generiram mod...")}
               </div>
@@ -1341,7 +1341,7 @@ export default function ExperiencePage() {
                 "Describe your mode, e.g. show one English word and definition daily with a large centered font",
                 "Opiši svoj mod, npr. svakog dana prikaži jednu englesku riječ i definiciju velikim centriranim fontom",
               )}
-              className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm resize-y bg-white"
+              className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm resize-y bg-white"
               disabled={customGenerating}
             />
 
@@ -1349,7 +1349,7 @@ export default function ExperiencePage() {
               value={customModeName}
               onChange={(e) => setCustomModeName(e.target.value)}
               placeholder={tr("模式名称（例如：今日英语）", "Mode name (e.g. Daily English)", "Naziv moda (npr. Dnevni engleski)")}
-              className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm bg-white"
+              className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
               disabled={customGenerating}
             />
 
@@ -1378,7 +1378,7 @@ export default function ExperiencePage() {
                   "Besplatna kvota je potrošena. Možeš unijeti kod pozivnice za dodatne besplatne LLM pozive ili postaviti vlastiti API ključ u postavkama uređaja.",
                 )}
               </p>
-              <div className="p-3 rounded-sm border border-ink/20 bg-paper-dark">
+              <div className="p-3 rounded-xl border border-ink/20 bg-paper-dark">
                 <p className="text-xs text-ink-light mb-2">
                   {tr(
                     "💡 提示：如果您有自己的 API key，可以在个人信息中配置，这样就不会受到额度限制了。",
@@ -1407,7 +1407,7 @@ export default function ExperiencePage() {
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
                   placeholder={tr("请输入邀请码", "Enter invitation code", "Unesi kod pozivnice")}
-                  className="w-full rounded-sm border border-ink/20 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !redeemingInvite) {

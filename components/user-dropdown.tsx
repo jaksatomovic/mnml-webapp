@@ -25,11 +25,11 @@ export function UserDropdown({ locale, username, onLogout }: UserDropdownProps) 
     >
       <button
         type="button"
-        className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-ink-light transition-colors hover:text-ink"
+        className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-ink-light transition-colors duration-200 hover:text-ink hover:bg-ink/5"
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-ink/20 bg-white text-ink">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-ink/12 bg-white text-ink shadow-sm">
           <User size={14} />
         </span>
         <span className="max-w-28 truncate">{username}</span>
@@ -38,7 +38,7 @@ export function UserDropdown({ locale, username, onLogout }: UserDropdownProps) 
 
       {open && (
         <div
-          className="absolute right-0 top-[calc(100%+8px)] z-[100] min-w-52 rounded-lg border border-ink/10 bg-white p-2 shadow-lg"
+          className="absolute right-0 top-[calc(100%+8px)] z-[100] min-w-52 rounded-2xl border border-ink/10 bg-white/95 p-2 shadow-[0_8px_30px_-8px_rgba(0,0,0,0.15),0_0_0_1px_rgba(0,0,0,0.04)] backdrop-blur-xl"
           role="menu"
           onMouseEnter={openMenu}
           onMouseLeave={scheduleClose}
@@ -53,7 +53,7 @@ export function UserDropdown({ locale, username, onLogout }: UserDropdownProps) 
           <div className="py-1">
             <Link
               href={withLocalePath(locale, "/profile")}
-              className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-ink-light transition-colors hover:bg-gray-50 hover:text-ink"
+              className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm text-ink-light transition-colors duration-200 hover:bg-ink/6 hover:text-ink"
               role="menuitem"
               onClick={closeMenu}
             >
@@ -66,7 +66,7 @@ export function UserDropdown({ locale, username, onLogout }: UserDropdownProps) 
 
           <button
             type="button"
-            className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+            className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-sm text-red-600 transition-colors duration-200 hover:bg-red-50 hover:text-red-700"
             role="menuitem"
             onClick={onLogout}
           >

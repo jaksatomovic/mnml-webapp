@@ -158,7 +158,7 @@ export function TimetableEditor({ data, onChange, tr }: TimetableEditorProps) {
       <div className="flex gap-2">
         <button
           type="button"
-          className={`flex-1 px-3 py-1.5 text-xs rounded-sm border transition-all ${
+          className={`flex-1 px-3 py-1.5 text-xs rounded-xl border transition-all ${
             isUniv
               ? "bg-ink text-white border-ink"
               : "bg-transparent text-ink border-ink hover:bg-ink hover:text-white"
@@ -169,7 +169,7 @@ export function TimetableEditor({ data, onChange, tr }: TimetableEditorProps) {
         </button>
         <button
           type="button"
-          className={`flex-1 px-3 py-1.5 text-xs rounded-sm border transition-all ${
+          className={`flex-1 px-3 py-1.5 text-xs rounded-xl border transition-all ${
             !isUniv
               ? "bg-ink text-white border-ink"
               : "bg-transparent text-ink border-ink hover:bg-ink hover:text-white"
