@@ -68,8 +68,9 @@ export default async function DocSlugPage({
     `# ${cfg.title}\n\n${t(locale, "docs.fallbackTitle")}.`;
 
   return (
-    <article className="docs-prose">
-      <ReactMarkdown
+    <div className="mx-auto max-w-6xl px-6 py-10 md:py-14">
+      <article className="docs-prose rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-8">
+        <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({...props}) => (
@@ -81,15 +82,16 @@ export default async function DocSlugPage({
                   alt={imageAlt}
                   width={192}
                   height={96}
-                  className="h-24 w-auto object-contain rounded-md border border-ink/10 shadow-sm"
+                  className="h-24 w-auto object-contain rounded-xl border border-black/10 bg-white shadow-sm"
                 />
               </div>
             </div>
           )
         }}
-      >
-        {content}
-      </ReactMarkdown>
-    </article>
+        >
+          {content}
+        </ReactMarkdown>
+      </article>
+    </div>
   );
 }

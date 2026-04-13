@@ -10,19 +10,20 @@ export default async function DocsPage() {
     pickByLocale(locale, { zh, en, hr });
 
   return (
-    <article className="docs-prose">
-      <div className="flex items-center justify-between gap-4 mb-8">
-        <h1 className="!mb-0">{tr("快速开始", "Quick Start", "Brzi početak")}</h1>
-        <div className="flex-shrink-0">
-          <Image
-            src={locale === "zh" ? "/images/QQ.jpg" : "/images/QQ_EN.jpg"}
-            alt={tr("QQ群", "QQ Group", "QQ grupa")}
-            width={192}
-            height={96}
-            className="h-24 w-auto object-contain rounded-md border border-ink/10 shadow-sm"
-          />
+    <div className="mx-auto max-w-6xl px-6 py-10 md:py-14">
+      <article className="docs-prose rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-8">
+        <div className="mb-8 flex items-center justify-between gap-4">
+          <h1 className="!mb-0">{tr("快速开始", "Quick Start", "Brzi početak")}</h1>
+          <div className="flex-shrink-0">
+            <Image
+              src={locale === "zh" ? "/images/QQ.jpg" : "/images/QQ_EN.jpg"}
+              alt={tr("QQ群", "QQ Group", "QQ grupa")}
+              width={192}
+              height={96}
+              className="h-24 w-auto rounded-xl border border-black/10 bg-white object-contain shadow-sm"
+            />
+          </div>
         </div>
-      </div>
 
       <blockquote>
         {tr(
@@ -51,7 +52,7 @@ export default async function DocsPage() {
         <li><Link href={withLocalePath(locale, "/docs/deploy")}>{tr("本地部署", "Local Deployment", "Lokalni deployment")}</Link></li>
       </ul>
 
-      <div className="callout callout-tip">
+      <div className="callout callout-tip rounded-2xl border border-black/10 bg-black/[0.03]">
         <div className="callout-icon">
           <Lightbulb size={16} />
         </div>
@@ -67,7 +68,7 @@ export default async function DocsPage() {
         </div>
       </div>
 
-      <div className="callout callout-important">
+      <div className="callout callout-important rounded-2xl border border-black/10 bg-black/[0.03]">
         <div className="callout-icon">
           <Zap size={16} />
         </div>
@@ -104,6 +105,7 @@ export default async function DocsPage() {
           </Link>.
         </p>
       )}
-    </article>
+      </article>
+    </div>
   );
 }

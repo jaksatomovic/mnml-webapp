@@ -686,9 +686,9 @@ export default function DiscoverPage() {
   });
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.06),transparent_40%),linear-gradient(180deg,#f8f8f8_0%,#f3f3f3_100%)]">
       {/* Hero header */}
-      <section className="border-b border-ink/10 bg-white bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-size-[24px_24px]">
+      <section className="border-b border-black/10 bg-white/75 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-6 py-16 md:py-24">
           {/* Title block */}
           <div className="text-center mb-10">
@@ -721,7 +721,7 @@ export default function DiscoverPage() {
           </div>
 
           {/* Category pills and publish action */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white/70 p-4 shadow-[0_20px_50px_-35px_rgba(0,0,0,0.55)] backdrop-blur-xl">
             <div className="flex flex-wrap justify-center gap-3 flex-1">
               {categoryOptions.map((category) => (
                 <button
@@ -775,7 +775,7 @@ export default function DiscoverPage() {
       {/* Mode grid */}
       <section className="mx-auto max-w-6xl px-6 py-12 md:py-16">
         {installTargetMac && (
-          <div className="mb-8 border border-gray-200 rounded-xl p-4">
+          <div className="mb-8 rounded-2xl border border-black/10 bg-white/85 p-4 shadow-[0_20px_50px_-35px_rgba(0,0,0,0.6)] backdrop-blur-xl">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-semibold text-ink">{tr("我的插件", "My Plugins", "Moji Plugini")}</h2>
               <span className="text-xs text-ink-light">{tr("当前设备", "Current device", "Trenutni uređaj")}: {installTargetMac}</span>
@@ -878,7 +878,7 @@ export default function DiscoverPage() {
               return (
                 <Card
                   key={mode.id}
-                  className="group border border-gray-200/90 rounded-2xl overflow-hidden bg-white/90 hover:border-ink/20 hover:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18)] transition-all duration-300 ease-out flex flex-col"
+                  className="group overflow-hidden rounded-2xl border border-black/10 bg-white/90 shadow-[0_18px_45px_-35px_rgba(0,0,0,0.65)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-black/20 hover:shadow-[0_24px_45px_-24px_rgba(0,0,0,0.4)] flex flex-col"
                 >
                   <CardContent className="pt-8 px-6 pb-6 flex flex-col flex-1">
                     {/* Card header: name, author, and category */}

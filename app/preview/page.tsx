@@ -658,7 +658,7 @@ export default function ExperiencePage() {
           }
         }}
       />
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-6 rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.45)] backdrop-blur-xl flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-serif text-3xl font-bold text-ink mb-1">{t(locale, "preview.title", "No-device Demo")}</h1>
           <p className="text-ink-light text-sm">{t(locale, "preview.subtitle", "Try modes and preview without a device.")}</p>
@@ -667,7 +667,7 @@ export default function ExperiencePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[520px_1fr] gap-6 items-start">
         <div className="space-y-6">
-          <Card>
+          <Card className="rounded-3xl border-black/10 bg-white/85 shadow-[0_24px_80px_-50px_rgba(0,0,0,0.55)] backdrop-blur-xl">
             <CardHeader>
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3">
@@ -734,7 +734,7 @@ export default function ExperiencePage() {
         </div>
 
         <div className="space-y-6">
-          <Card>
+          <Card className="rounded-3xl border-black/10 bg-white/85 shadow-[0_24px_80px_-50px_rgba(0,0,0,0.55)] backdrop-blur-xl">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-baseline justify-between gap-3 flex-wrap">
                 <span className="text-base font-semibold text-ink">{t(locale, "preview.panel.display", "E-Ink Preview")}</span>

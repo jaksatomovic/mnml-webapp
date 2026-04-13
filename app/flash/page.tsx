@@ -457,7 +457,7 @@ export default function FlashPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-16">
-      <div className="text-center mb-16">
+      <div className="mb-12 rounded-3xl border border-black/10 bg-white/80 px-6 py-10 text-center shadow-[0_24px_80px_-40px_rgba(0,0,0,0.45)] backdrop-blur-xl md:px-8">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl border border-ink/10 bg-paper-dark mb-5">
           <Zap size={24} className="text-ink" />
         </div>
@@ -503,7 +503,7 @@ export default function FlashPage() {
             ))}
           </div>
 
-          <div className="mt-8 p-4 rounded-xl border border-ink/10 bg-paper">
+          <div className="mt-8 rounded-2xl border border-black/10 bg-white/75 p-4 shadow-[0_18px_40px_-35px_rgba(0,0,0,0.65)] backdrop-blur">
             <h3 className="text-sm font-semibold text-ink mb-2 flex items-center gap-2">
               <AlertCircle size={14} />
               {tr("注意事项", "Notes", "Napomene")}
@@ -536,7 +536,7 @@ export default function FlashPage() {
             {tr("固件烧录", "Firmware Flash", "Flashanje firmwarea")}
           </h2>
 
-          <div className="rounded-xl border border-ink/10 bg-white p-8 text-center">
+          <div className="rounded-3xl border border-black/10 bg-white/85 p-8 text-center shadow-[0_24px_80px_-45px_rgba(0,0,0,0.55)] backdrop-blur-xl">
             <div className="mb-6">
               <div className="inline-flex items-center gap-2 text-sm text-ink-light mb-2">
                 <CheckCircle2 size={14} className={status === "success" ? "text-green-600" : status === "failed" ? "text-red-500" : status === "flashing" ? "text-amber-500 animate-pulse" : "text-ink-light"} />
@@ -757,7 +757,7 @@ export default function FlashPage() {
               <Terminal size={14} />
               {tr("控制台日志", "Console Logs", "Konzolni logovi")}
             </h3>
-            <div className="ink-strong-select rounded-xl border border-ink/10 bg-ink text-green-400 font-mono text-xs p-4 h-48 overflow-y-auto">
+            <div className="ink-strong-select rounded-2xl border border-black/10 bg-ink text-green-400 font-mono text-xs p-4 h-48 overflow-y-auto shadow-[0_20px_45px_-30px_rgba(0,0,0,0.85)]">
               {logs.map((log, i) => (
                 <div key={i} className="py-0.5 leading-relaxed">
                   {log}

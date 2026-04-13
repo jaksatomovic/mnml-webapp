@@ -287,7 +287,7 @@ export default async function Home() {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.06),transparent_48%)]">
         <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             {/* Text */}
@@ -349,7 +349,7 @@ export default async function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="border-t border-ink/10 bg-paper">
+      <section className="border-t border-ink/10 bg-paper/80 backdrop-blur">
         <div className="mx-auto max-w-6xl px-6 py-20">
           <div className="text-center mb-14">
             <h2 className="font-serif text-3xl font-bold text-ink mb-3">
@@ -377,7 +377,7 @@ export default async function Home() {
                 desc: tr("24 个内置模式，支持自定义创建，也支持在模式广场发现和分享创意。", "24 built-in modes, custom creation, and a community mode plaza for sharing ideas.", "24 ugrađena moda, podrška za vlastite modove i galeriju za dijeljenje ideja."),
               },
             ].map((feature) => (
-              <Card key={feature.title} className="p-8 text-center group hover:border-ink/20 transition-colors">
+              <Card key={feature.title} className="group p-8 text-center border-black/10 bg-white/85 shadow-[0_18px_45px_-35px_rgba(0,0,0,0.6)] backdrop-blur-xl hover:border-black/20 transition-colors">
                 <CardContent className="p-0">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl border border-ink/10 mb-5 group-hover:border-ink/30 transition-colors">
                     <feature.icon size={22} className="text-ink" />
@@ -410,7 +410,7 @@ export default async function Home() {
           <div className="mb-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
             {coreModesLocalized.map((mode) => (
               <div key={mode.name} className="aspect-square">
-                <Card className="group h-full p-3 md:p-4 hover:border-ink/20 transition-all duration-200 hover:-translate-y-0.5">
+                <Card className="group h-full p-3 md:p-4 border-black/10 bg-white/85 shadow-[0_14px_40px_-30px_rgba(0,0,0,0.55)] hover:border-black/20 transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="h-full p-0 text-center flex flex-col items-center">
                     <div>
                       <div className="inline-flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-xl bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
@@ -445,7 +445,7 @@ export default async function Home() {
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-10 gap-4">
             {moreModesLocalized.slice(0, 8).map((mode) => (
               <div key={mode.name} className="aspect-square">
-                <Card className="group h-full p-3 md:p-4 hover:border-ink/20 transition-all duration-200 hover:-translate-y-0.5">
+                <Card className="group h-full p-3 md:p-4 border-black/10 bg-white/85 shadow-[0_14px_40px_-30px_rgba(0,0,0,0.55)] hover:border-black/20 transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="h-full p-0 text-center flex flex-col items-center">
                     <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
                       <mode.icon size={16} />
@@ -462,7 +462,7 @@ export default async function Home() {
             ))}
 
             <div className="aspect-square md:aspect-auto md:row-span-2 md:col-span-2 md:col-start-9 md:row-start-1">
-              <Card className="group h-full p-3 md:p-4 border-dashed hover:border-ink/30 transition-all duration-200 hover:-translate-y-0.5">
+              <Card className="group h-full p-3 md:p-4 border-dashed border-black/20 bg-white/85 shadow-[0_14px_40px_-30px_rgba(0,0,0,0.55)] hover:border-black/30 transition-all duration-200 hover:-translate-y-0.5">
                 <CardContent className="h-full p-0 text-center flex flex-col items-center justify-center">
                   <div className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl border border-ink/20 mb-2.5 group-hover:bg-ink group-hover:text-white group-hover:border-ink transition-colors">
                     <Plus size={18} />
@@ -482,7 +482,7 @@ export default async function Home() {
 
             {moreModesLocalized.slice(8).map((mode) => (
               <div key={mode.name} className="aspect-square">
-                <Card className="group h-full p-3 md:p-4 hover:border-ink/20 transition-all duration-200 hover:-translate-y-0.5">
+                <Card className="group h-full p-3 md:p-4 border-black/10 bg-white/85 shadow-[0_14px_40px_-30px_rgba(0,0,0,0.55)] hover:border-black/20 transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="h-full p-0 text-center flex flex-col items-center">
                     <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
                       <mode.icon size={16} />

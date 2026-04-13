@@ -23,7 +23,6 @@ import {
 import {
   DEFAULT_PANEL_H,
   DEFAULT_PANEL_W,
-  inksightBodySize,
 } from "@/lib/inksight-chrome";
 import { CalendarReminders } from "@/components/config/calendar-reminders";
 import { TimetableEditor, type TimetableData } from "@/components/config/timetable-editor";
@@ -1725,9 +1724,8 @@ function ConfigPageInner() {
       params.set("mode_override", JSON.stringify({ countdownEvents: [] }));
       if (previewColors > 2) params.set("colors", String(previewColors));
       if (forceFresh) params.set("no_cache", "1");
-      const bodyCd = inksightBodySize(DEFAULT_PANEL_W, DEFAULT_PANEL_H);
-      params.set("w", String(bodyCd.w));
-      params.set("h", String(bodyCd.h));
+      params.set("w", String(DEFAULT_PANEL_W));
+      params.set("h", String(DEFAULT_PANEL_H));
       return { m, params, consumeNoCacheOnce };
     }
     const modeOverrideSource = sanitizeModeOverride(
@@ -1780,9 +1778,8 @@ function ConfigPageInner() {
     if (locationChanged && effectiveLocation.city) params.set("city_override", effectiveLocation.city);
     if (previewColors > 2) params.set("colors", String(previewColors));
     if (forceFresh || locationChanged || hasModeOverride) params.set("no_cache", "1");
-    const body = inksightBodySize(DEFAULT_PANEL_W, DEFAULT_PANEL_H);
-    params.set("w", String(body.w));
-    params.set("h", String(body.h));
+    params.set("w", String(DEFAULT_PANEL_W));
+    params.set("h", String(DEFAULT_PANEL_H));
     return { m, params, consumeNoCacheOnce };
   }, [config, currentLocation, mac, memoText, modeOverrides, previewColors, previewMode, previewNoCacheOnce, sanitizeModeOverride]);
 
