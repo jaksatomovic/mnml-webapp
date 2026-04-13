@@ -3494,35 +3494,6 @@ function ConfigPageInner() {
                                   <button
                                     type="button"
                                     className="bg-white py-1.5 hover:bg-ink hover:text-white text-ink"
-                                    onClick={() => openSurfaceLayoutEditor(surface.id)}
-                                  >
-                                    {tr("编辑", "Edit", "Uredi")}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="bg-white py-1.5 hover:bg-ink hover:text-white text-ink"
-                                    onClick={() => {
-                                      const src = surfaceCatalog.find((s) => s.id === surface.id);
-                                      if (!src) return;
-                                      const newId = `custom_${Date.now().toString(36)}`;
-                                      setSurfaceDrafts((prev) => ({
-                                        ...prev,
-                                        [newId]: {
-                                          ...src.definition,
-                                          id: newId,
-                                          type: "surface",
-                                          name: `${src.name} (2)`,
-                                        },
-                                      }));
-                                      addSurfaceToPlaylist(newId);
-                                      openSurfaceLayoutEditor(newId);
-                                    }}
-                                  >
-                                    {tr("复制", "Duplicate", "Dupliciraj")}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="bg-white py-1.5 hover:bg-ink hover:text-white text-ink"
                                     onClick={() =>
                                       inPlaylist ? removeSurfaceFromPlaylist(surface.id) : addSurfaceToPlaylist(surface.id)
                                     }
@@ -3924,7 +3895,7 @@ function ConfigPageInner() {
                           className="bg-white text-ink border-ink/20 hover:bg-ink hover:text-white active:bg-ink active:text-white disabled:bg-white disabled:text-ink/50"
                         >
                           {saving ? <Loader2 size={14} className="animate-spin mr-1 inline" /> : null}
-                          {tr("保存到设备", "Save to Device", "Spremi na uređaj")}
+                          {tr("保存 Surface", "Save Surface", "Spremi surface")}
                         </Button>
                       }
                     />
@@ -4652,7 +4623,9 @@ function ConfigPageInner() {
             className="w-full bg-white text-ink border-ink/20 hover:bg-ink hover:text-white active:bg-ink active:text-white disabled:bg-white disabled:text-ink/50"
           >
             {saving ? <Loader2 size={14} className="animate-spin mr-1" /> : <Save size={14} className="mr-1" />}
-            {tr("保存到设备", "Save to Device", "Spremi na uređaj")}
+            {activeTab === "surface"
+              ? tr("保存 Surface", "Save Surface", "Spremi surface")
+              : tr("保存到设备", "Save to Device", "Spremi na uređaj")}
           </Button>
         </div>
       )}
