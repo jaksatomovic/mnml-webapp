@@ -122,7 +122,7 @@ export default function FlashPage() {
   const [flashProgress, setFlashProgress] = useState<number>(0);
   const [serialSupported, setSerialSupported] = useState<boolean | null>(null);
   const [logs, setLogs] = useState<string[]>([
-    tr("[系统] InkWell Web Flasher 已就绪", "[system] InkWell Web Flasher ready", "[sustav] InkWell Web Flasher je spreman"),
+    tr("[系统] NexInk Web Flasher 已就绪", "[system] NexInk Web Flasher ready", "[sustav] NexInk Web Flasher je spreman"),
     tr("[提示] 请使用 Chrome 或 Edge 浏览器以获得最佳体验", "[tip] Use Chrome or Edge for best compatibility", "[savjet] Koristi Chrome ili Edge za najbolju kompatibilnost"),
     tr("[提示] 确保已安装 ESP32 USB 驱动程序", "[tip] Ensure ESP32 USB driver is installed", "[savjet] Provjeri da je ESP32 USB driver instaliran"),
   ]);
@@ -465,7 +465,7 @@ export default function FlashPage() {
           {tr("在线刷机", "Web Flasher", "Web flasher")}
         </h1>
         <p className="text-ink-light max-w-lg mx-auto">
-          {tr("无需安装任何软件，直接在浏览器中为你的 InkWell 设备烧录最新固件。", "No extra software required. Flash the latest firmware directly in your browser.", "Bez dodatnog softvera. Flashaj najnoviji firmware izravno u pregledniku.")}
+          {tr("无需安装任何软件，直接在浏览器中为你的 NexInk 设备烧录最新固件。", "No extra software required. Flash the latest firmware directly in your browser.", "Bez dodatnog softvera. Flashaj najnoviji firmware izravno u pregledniku.")}
           <br />
           {tr("基于 WebSerial API，支持 Chrome 和 Edge 浏览器。", "Powered by WebSerial API, works with Chrome and Edge.", "Pokreće ga WebSerial API i radi u Chromeu i Edgeu.")}
         </p>
@@ -734,7 +734,7 @@ export default function FlashPage() {
                 </h3>
                 <ol className="space-y-2 text-sm text-green-700 list-decimal list-inside">
                   <li>{tr("断开 USB，给设备上电", "Disconnect USB and power on the device", "Odspoji USB i uključi uređaj")}</li>
-                  <li>{tr("在手机/电脑 WiFi 列表中找到 InkWell-XXXX 热点并连接", "Find the InkWell-XXXX hotspot in your WiFi list and connect", "Na listi WiFi mreža pronađi hotspot InkWell-XXXX i poveži se")}</li>
+                  <li>{tr("在手机/电脑 WiFi 列表中找到 NexInk-XXXX 热点并连接", "Find the NexInk-XXXX hotspot in your WiFi list and connect", "Na listi WiFi mreža pronađi hotspot NexInk-XXXX i poveži se")}</li>
                   <li>{tr("浏览器会自动弹出配网页面（如未弹出，手动访问 192.168.4.1）", "The browser should open the provisioning page automatically. If not, visit 192.168.4.1 manually.", "Preglednik bi trebao automatski otvoriti provisioning stranicu. Ako ne, ručno otvori 192.168.4.1.")}</li>
                   <li>{tr("在配网页面输入 WiFi 和服务器地址后保存", "Enter WiFi and server address on the provisioning page, then save", "Na provisioning stranici unesi WiFi i adresu servera pa spremi")}</li>
                   <li>{tr("保存成功后，配网页面底部会显示“打开配置页面”链接，点击即可进行个性化配置", "After saving, the provisioning page shows an Open Configuration Page link for personalized setup", "Nakon spremanja, na dnu provisioning stranice pojavit će se poveznica Otvori konfiguraciju za daljnje postavke")}</li>
@@ -792,7 +792,7 @@ export default function FlashPage() {
                 </li>
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-ink text-white text-xs flex items-center justify-center font-medium">2</span>
-                  <span>{tr("在 WiFi 列表中找到 InkWell-XXXX 热点并连接", "Find the InkWell-XXXX hotspot in the WiFi list and connect", "Na listi WiFi mreža pronađi hotspot InkWell-XXXX i poveži se")}</span>
+                  <span>{tr("在 WiFi 列表中找到 NexInk-XXXX 热点并连接", "Find the NexInk-XXXX hotspot in the WiFi list and connect", "Na listi WiFi mreža pronađi hotspot NexInk-XXXX i poveži se")}</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-ink text-white text-xs flex items-center justify-center font-medium">3</span>

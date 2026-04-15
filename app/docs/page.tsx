@@ -27,9 +27,9 @@ export default async function DocsPage() {
 
       <blockquote>
         {tr(
-          "InkWell 是一块适合放在桌面的电子墨水信息屏。先准备推荐硬件，完成刷机与配网，再通过 WebApp 配置内容即可。",
-          "InkWell is a calm e-ink desk companion. Start with the recommended hardware, flash the firmware, connect Wi-Fi, then configure content from the web app.",
-          "InkWell je smireni e-ink suputnik za radni stol. Krenite s preporučenim hardverom, flashajte firmware, spojite Wi‑Fi i zatim podesite sadržaj kroz web app.",
+          "NexInk 是一块适合放在桌面的电子墨水信息屏。先准备推荐硬件，完成刷机与配网，再通过 WebApp 配置内容即可。",
+          "NexInk is a calm e-ink desk companion. Start with the recommended hardware, flash the firmware, connect Wi-Fi, then configure content from the web app.",
+          "NexInk je smireni e-ink suputnik za radni stol. Krenite s preporučenim hardverom, flashajte firmware, spojite Wi‑Fi i zatim podesite sadržaj kroz web app.",
         )}
       </blockquote>
 

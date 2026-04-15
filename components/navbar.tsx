@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Menu, X, Github, User, Languages } from "lucide-react";
 import { authHeaders, clearToken, fetchCurrentUser, onAuthChanged } from "@/lib/auth";
@@ -93,15 +92,11 @@ export function Navbar() {
     <header className="sticky top-0 z-40 w-full border-b border-ink/[0.07] bg-white/72 backdrop-blur-xl supports-backdrop-filter:bg-white/65 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
       <nav className="relative mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href={withLocalePath(locale, "/")} className="flex items-center gap-2 group">
-          <Image 
-            src="/images/logo.png" 
-            alt="InkWell Logo" 
-            width={32} 
-            height={32} 
-            className="rounded-[10px] object-contain shadow-sm ring-1 ring-black/4"
-          />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-ink/20 bg-ink text-white text-xs font-bold font-serif shadow-sm">
+            N
+          </div>
           <span className="text-lg font-semibold text-ink tracking-tight">
-            InkWell
+            NexInk
           </span>
         </Link>
 

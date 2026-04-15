@@ -18,9 +18,9 @@ const notoSerifSc = Noto_Serif_SC({
 });
 
 const baseMetadata: Metadata = {
-  title: "InkWell",
-  description: "InkWell is an AI e-ink desk companion with online flashing, device configuration, and a community mode plaza.",
-  keywords: ["InkWell", "E-Ink", "ESP32", "LLM", "desk companion"],
+  title: "NexInk",
+  description: "NexInk is an AI e-ink desk companion with online flashing, device configuration, and a community mode plaza.",
+  keywords: ["NexInk", "E-Ink", "ESP32", "LLM", "desk companion"],
   manifest: "/manifest.json",
   other: {
     "apple-mobile-web-app-capable": "yes",

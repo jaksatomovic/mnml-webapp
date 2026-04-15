@@ -296,7 +296,7 @@ export default async function Home() {
                 Open Source &middot; ESP32-S3 &middot; E-Ink
               </p>
               <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-ink leading-tight mb-6">
-                {tr("墨鱼AI墨水屏", "InkWell", "InkWell")}
+                {tr("墨鱼AI墨水屏", "NexInk", "NexInk")}
                 <br />
                 <span className="text-ink-muted text-3xl md:text-4xl lg:text-5xl">
                   {tr("桌面上的多场景AI搭档", "Your Multi-Scenario AI Companion on Desk", "Tvoj višescenski AI suputnik na stolu")}
@@ -305,8 +305,8 @@ export default async function Home() {
               <p className="text-lg text-ink-light leading-relaxed mb-8 max-w-lg">
                 {tr(
                   "墨鱼AI墨水屏是一款支持在线刷机、设备配置、无设备预览与模式广场的 AI 电子墨水屏桌面伴侣。",
-                  "InkWell is an AI e-ink desk companion with one website for flashing, configuration, preview, and discovering new modes.",
-                  "InkWell je AI e-ink suputnik za stol s jednim webom za flashanje, konfiguraciju, preview i otkrivanje novih modova.",
+                  "NexInk is an AI e-ink desk companion with one website for flashing, configuration, preview, and discovering new modes.",
+                  "NexInk je AI e-ink suputnik za stol s jednim webom za flashanje, konfiguraciju, preview i otkrivanje novih modova.",
                 )}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -336,7 +336,7 @@ export default async function Home() {
               <div className="relative w-full max-w-md aspect-[4/3] rounded-xl border border-ink/10 overflow-hidden">
                 <Image
                   src={locale === "zh" ? "/images/intro.jpg" : "/images/intro_eng.jpg"}
-                  alt={tr("墨鱼AI墨水屏展示图", "InkWell product preview", "Pregled InkWell uređaja")}
+                  alt={tr("墨鱼AI墨水屏展示图", "NexInk product preview", "Pregled NexInk uređaja")}
                   fill
                   className="object-cover"
                   priority
@@ -531,7 +531,7 @@ export default async function Home() {
         <div className="mx-auto max-w-6xl px-6 py-20 text-center">
           <Sparkles size={28} className="mx-auto text-ink-light mb-4" />
           <h2 className="font-serif text-3xl font-bold text-ink mb-4">
-            {tr("开始体验墨鱼AI墨水屏", "Start Your InkWell Journey", "Započni svoj InkWell put")}
+            {tr("开始体验墨鱼AI墨水屏", "Start Your NexInk Journey", "Započni svoj NexInk put")}
           </h2>
           <p className="text-ink-light mb-8 max-w-md mx-auto">
             {tr("无需编程基础，通过浏览器即可完成固件烧录。", "No coding required. Flash firmware directly in browser with an ESP32 and E-Ink panel.", "Bez potrebe za kodiranjem. Flashaj firmware izravno u pregledniku uz ESP32 i e-ink panel.")}

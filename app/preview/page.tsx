@@ -757,7 +757,7 @@ export default function ExperiencePage() {
                     <div className="relative w-full max-w-md aspect-[4/3] bg-white border border-ink/20 rounded-xl overflow-hidden">
                       <Image
                         src={previewImageUrl}
-                        alt={t(locale, "preview.display.alt", "InkWell preview")}
+                        alt={t(locale, "preview.display.alt", "NexInk preview")}
                         fill
                         className="object-contain"
                         unoptimized

@@ -55,7 +55,7 @@ function WidgetContent() {
       {imgSrc ? (
         <Image
           src={imgSrc}
-          alt={pickByLocale(locale, { zh: "InkWell 小组件", en: "InkWell Widget", hr: "InkWell widget" })}
+          alt={pickByLocale(locale, { zh: "NexInk 小组件", en: "NexInk Widget", hr: "NexInk widget" })}
           width={800}
           height={480}
           unoptimized

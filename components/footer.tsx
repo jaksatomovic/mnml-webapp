@@ -7,8 +7,8 @@ import { localeFromPathname, pickByLocale, t } from "@/lib/i18n";
 export function Footer() {
   const pathname = usePathname();
   const locale = localeFromPathname(pathname || "/");
-  const brandGlyph = pickByLocale(locale, { zh: "墨", en: "I", hr: "I" });
-  const brandName = pickByLocale(locale, { zh: "墨鱼InkWell", en: "InkWell", hr: "InkWell" });
+  const brandGlyph = "N";
+  const brandName = pickByLocale(locale, { zh: "墨鱼NexInk", en: "NexInk", hr: "NexInk" });
   const licenseText = pickByLocale(locale, {
     zh: "Released under the MIT License.",
     en: "Released under the MIT License.",

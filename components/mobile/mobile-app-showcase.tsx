@@ -700,7 +700,7 @@ function MePhone({ locale }: { locale: Locale }) {
     { icon: Bell, title: tr(locale, { zh: "通知", en: "Notifications", hr: "Obavijesti" }), subtitle: tr(locale, { zh: "每日 8:00 推送", en: "Daily at 8:00", hr: "Svaki dan u 8:00" }) },
     { icon: Languages, title: tr(locale, { zh: "语言", en: "Language", hr: "Jezik" }), subtitle: tr(locale, { zh: "中文 / English", en: "Chinese / English", hr: "Hrvatski / English" }) },
     { icon: Settings2, title: tr(locale, { zh: "缓存与隐私", en: "Cache & privacy", hr: "Cache i privatnost" }), subtitle: tr(locale, { zh: "本地缓存约 1.0 MB", en: "1.0 MB local cache", hr: "1.0 MB lokalnog cachea" }) },
-    { icon: ShieldCheck, title: tr(locale, { zh: "关于 InkWell", en: "About InkWell", hr: "O InkWellu" }), subtitle: tr(locale, { zh: "慢信息移动伴侣", en: "Zen-like mobile companion", hr: "Mobilni suputnik za spore informacije" }) },
+    { icon: ShieldCheck, title: tr(locale, { zh: "关于 NexInk", en: "About NexInk", hr: "O NexInku" }), subtitle: tr(locale, { zh: "慢信息移动伴侣", en: "Zen-like mobile companion", hr: "Mobilni suputnik za spore informacije" }) },
   ];
 
   return (
@@ -756,9 +756,9 @@ export function MobileAppShowcase({ locale }: { locale: Locale }) {
             {tr(
               locale,
               {
-                zh: "把 InkWell 手机 App 设计文档，直接落成可浏览的产品原型。",
-                en: "InkWell mobile, translated from spec into a browsable product prototype.",
-                hr: "InkWell mobile pretvoren iz specifikacije u pregledan produktni prototip.",
+                zh: "把 NexInk 手机 App 设计文档，直接落成可浏览的产品原型。",
+                en: "NexInk mobile, translated from spec into a browsable product prototype.",
+                hr: "NexInk mobile pretvoren iz specifikacije u pregledan produktni prototip.",
               },
             )}
           </h1>

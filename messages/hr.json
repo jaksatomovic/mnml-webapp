@@ -1,6 +1,6 @@
 {
-  "meta.title": "InkWell",
-  "meta.description": "InkWell je AI e-ink stolni suputnik s online flashanjem, konfiguracijom uređaja, previewjem bez uređaja i galerijom widgeta zajednice.",
+  "meta.title": "NexInk",
+  "meta.description": "NexInk je AI e-ink stolni suputnik s online flashanjem, konfiguracijom uređaja, previewjem bez uređaja i galerijom widgeta zajednice.",
   "nav.home": "Početna",
   "nav.docs": "Dokumentacija",
   "nav.discover": "Otkrij",
@@ -42,7 +42,7 @@
   "docs.section.usage": "Korištenje",
   "docs.section.advanced": "Napredno",
   "docs.fallbackTitle": "Sadržaj je u pripremi",
-  "footer.desc": "InkWell je AI e-ink stolni suputnik s online flashanjem, konfiguracijom uređaja i galerijom widgeta zajednice.",
+  "footer.desc": "NexInk je AI e-ink stolni suputnik s online flashanjem, konfiguracijom uređaja i galerijom widgeta zajednice.",
   "footer.links": "Linkovi",
   "footer.githubRepo": "GitHub Repozitorij",
   "footer.hardwareGuide": "Vodič za Hardver",
