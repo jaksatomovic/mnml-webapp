@@ -27,9 +27,9 @@ export default async function DocsPage() {
 
       <blockquote>
         {tr(
-          "InkSight 是一块适合放在桌面的电子墨水信息屏。先准备推荐硬件，完成刷机与配网，再通过 WebApp 配置内容即可。",
-          "InkSight is a calm e-ink desk companion. Start with the recommended hardware, flash the firmware, connect Wi-Fi, then configure content from the web app.",
-          "InkSight je smireni e-ink suputnik za radni stol. Krenite s preporučenim hardverom, flashajte firmware, spojite Wi‑Fi i zatim podesite sadržaj kroz web app.",
+          "InkWell 是一块适合放在桌面的电子墨水信息屏。先准备推荐硬件，完成刷机与配网，再通过 WebApp 配置内容即可。",
+          "InkWell is a calm e-ink desk companion. Start with the recommended hardware, flash the firmware, connect Wi-Fi, then configure content from the web app.",
+          "InkWell je smireni e-ink suputnik za radni stol. Krenite s preporučenim hardverom, flashajte firmware, spojite Wi‑Fi i zatim podesite sadržaj kroz web app.",
         )}
       </blockquote>
 
@@ -60,9 +60,9 @@ export default async function DocsPage() {
           <p className="callout-title">{tr("入门建议", "Tip", "Savjet")}</p>
           <p>
             {tr(
-              "第一次搭建建议使用 ESP32-C3 + 4.2寸 SPI 墨水屏模块，并优先使用 USB 供电排障。",
-              "For a first build, use USB power and the recommended `ESP32-C3 + 4.2-inch e-paper` setup.",
-              "Za prvu izradu preporučujemo USB napajanje i preporučeni `ESP32-C3 + 4.2-inch e-paper` setup.",
+              "第一次搭建建议使用 ESP32-S3（如 Elecrow CrowPanel 4.2\" 一体屏）+ 4.2寸墨水屏方案，并优先使用 USB 供电排障。",
+              "For a first build, use USB power and the recommended `ESP32-S3 + 4.2-inch e-paper` setup (e.g. Elecrow CrowPanel).",
+              "Za prvu izradu preporučujemo USB napajanje i preporučeni `ESP32-S3 + 4.2-inch e-paper` setup (npr. Elecrow CrowPanel).",
             )}
           </p>
         </div>

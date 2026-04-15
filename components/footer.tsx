@@ -8,7 +8,7 @@ export function Footer() {
   const pathname = usePathname();
   const locale = localeFromPathname(pathname || "/");
   const brandGlyph = pickByLocale(locale, { zh: "墨", en: "I", hr: "I" });
-  const brandName = pickByLocale(locale, { zh: "墨鱼InkSight", en: "InkSight", hr: "InkSight" });
+  const brandName = pickByLocale(locale, { zh: "墨鱼InkWell", en: "InkWell", hr: "InkWell" });
   const licenseText = pickByLocale(locale, {
     zh: "Released under the MIT License.",
     en: "Released under the MIT License.",

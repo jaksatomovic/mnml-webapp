@@ -37,7 +37,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
       <body className="min-h-screen bg-neutral-50 text-neutral-900">
         <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-start justify-center gap-4 px-6">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-            InkSight
+            InkWell
           </p>
           <h1 className="text-3xl font-semibold">{title}</h1>
           <p className="max-w-xl text-sm leading-6 text-neutral-600">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SurfaceLayoutTemplatePicker } from "@/components/config/surface-layout-template-picker";
@@ -36,12 +36,6 @@ export interface SurfaceCreateWizardProps {
     layout: Array<Record<string, unknown>>;
   }) => void;
 }
-
-const PRESET_DIMS: Record<string, { cols: number; rows: number }> = {
-  g22: { cols: 2, rows: 2 },
-  g23: { cols: 2, rows: 3 },
-  g32: { cols: 3, rows: 2 },
-};
 
 function emptySlotsForGrid(cols: number, rows: number): SurfaceGridSlot[] {
   const cells = cols * rows;
@@ -91,27 +85,14 @@ export function SurfaceCreateWizard({
   const [start, setStart] = useState<WizardStart>("blank");
   const [presetRef, setPresetRef] = useState<string>(presetIds[0] || "");
   const [duplicateId, setDuplicateId] = useState<string>(duplicateOptions[0]?.id || "");
-  /** When "blank": use 8 templates or advanced custom grid. */
+  /** When "blank": one of 8 layout templates. */
   const [layoutTemplateId, setLayoutTemplateId] = useState<SurfaceLayoutTemplateId>("layout_8");
-  const [gridChoice, setGridChoice] = useState<"templates" | "custom">("templates");
-  const [gridKey, setGridKey] = useState<string>("g22");
-  const [customCols, setCustomCols] = useState(2);
-  const [customRows, setCustomRows] = useState(2);
   const [displayName, setDisplayName] = useState("");
-
-  const dims = useMemo(() => {
-    if (gridKey === "custom") {
-      return { cols: customCols, rows: customRows };
-    }
-    return PRESET_DIMS[gridKey] || PRESET_DIMS.g22;
-  }, [gridKey, customCols, customRows]);
 
   const reset = () => {
     setStep(1);
     setStart("blank");
     setLayoutTemplateId("layout_8");
-    setGridChoice("templates");
-    setGridKey("g22");
     setDisplayName("");
   };
 
@@ -122,19 +103,10 @@ export function SurfaceCreateWizard({
     let slots: SurfaceGridSlot[];
 
     if (start === "blank") {
-      if (gridChoice === "custom") {
-        const { cols, rows } = dims;
-        if (cols * rows > MAX_SURFACE_SLOTS) {
-          return;
-        }
-        grid = buildGridSpec(cols, rows);
-        slots = emptySlotsForGrid(cols, rows);
-      } else {
-        const meta = getSurfaceLayoutTemplate(layoutTemplateId);
-        if (!meta) return;
-        grid = buildGridSpec(2, 2);
-        slots = cloneTemplateSlots(meta);
-      }
+      const meta = getSurfaceLayoutTemplate(layoutTemplateId);
+      if (!meta) return;
+      grid = buildGridSpec(2, 2);
+      slots = cloneTemplateSlots(meta);
     } else {
       const sid = start === "preset" ? presetRef : duplicateId;
       const def = getDefinition(sid);
@@ -143,7 +115,8 @@ export function SurfaceCreateWizard({
         grid = normalizeSurfaceGridSpec(def?.grid as GridSpec);
         slots = borrowed.map((s) => ({ ...s, mode_id: undefined, mode: undefined }));
       } else {
-        const { cols, rows } = dims;
+        const cols = 2;
+        const rows = 2;
         if (cols * rows > MAX_SURFACE_SLOTS) return;
         grid = buildGridSpec(cols, rows);
         slots = emptySlotsForGrid(cols, rows);
@@ -155,9 +128,6 @@ export function SurfaceCreateWizard({
     reset();
     onClose();
   };
-
-  const canProceedStep2 =
-    start !== "blank" || gridChoice !== "custom" || dims.cols * dims.rows <= MAX_SURFACE_SLOTS;
 
   const step2ForBorrowed = start === "preset" || start === "duplicate";
 
@@ -199,7 +169,7 @@ export function SurfaceCreateWizard({
             </label>
             {start === "preset" ? (
               <select
-                className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
+                className="ink-native-select w-full"
                 value={presetRef}
                 onChange={(e) => setPresetRef(e.target.value)}
               >
@@ -216,7 +186,7 @@ export function SurfaceCreateWizard({
             </label>
             {start === "duplicate" ? (
               <select
-                className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm"
+                className="ink-native-select w-full"
                 value={duplicateId}
                 onChange={(e) => setDuplicateId(e.target.value)}
               >
@@ -253,96 +223,11 @@ export function SurfaceCreateWizard({
                   tr={tr}
                   title={tr("选择布局", "Choose a layout", "Odaberi raspored")}
                   hint={tr(
-                    "从 8 种布局中选一种搭建面板；也可改用下方自定义行列（空白均分格子）。",
-                    "Pick one of 8 layouts for your dashboard, or use custom rows/columns below for a plain grid.",
-                    "Odaberi jedan od 8 rasporeda ili ispod prilagođenu mrežu.",
+                    "从 8 种布局中选一种搭建面板。",
+                    "Pick one of 8 layouts for your dashboard.",
+                    "Odaberi jedan od 8 rasporeda za panel.",
                   )}
                 />
-
-                <div className="rounded-xl border border-ink/10 bg-paper-dark/30 px-3 py-2 space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-ink-light">
-                      {tr("高级：自定义行列", "Advanced: custom grid", "Napredno: mreža")}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className={`text-xs rounded-lg px-2 py-1 border ${
-                          gridChoice === "templates" ? "border-ink bg-ink text-white" : "border-ink/20 bg-white"
-                        }`}
-                        onClick={() => setGridChoice("templates")}
-                      >
-                        {tr("8 种模板", "8 templates", "8 predložaka")}
-                      </button>
-                      <button
-                        type="button"
-                        className={`text-xs rounded-lg px-2 py-1 border ${
-                          gridChoice === "custom" ? "border-ink bg-ink text-white" : "border-ink/20 bg-white"
-                        }`}
-                        onClick={() => setGridChoice("custom")}
-                      >
-                        {tr("自定义", "Custom", "Prilagođeno")}
-                      </button>
-                    </div>
-                  </div>
-                  {gridChoice === "custom" ? (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        {(Object.keys(PRESET_DIMS) as string[]).map((k) => (
-                          <button
-                            key={k}
-                            type="button"
-                            className={`rounded-xl border px-3 py-2 text-sm ${
-                              gridKey === k ? "border-ink bg-ink text-white" : "border-ink/20 bg-white"
-                            }`}
-                            onClick={() => setGridKey(k)}
-                          >
-                            {PRESET_DIMS[k].cols}×{PRESET_DIMS[k].rows}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          className={`rounded-xl border px-3 py-2 text-sm col-span-2 ${
-                            gridKey === "custom" ? "border-ink bg-ink text-white" : "border-ink/20 bg-white"
-                          }`}
-                          onClick={() => setGridKey("custom")}
-                        >
-                          {tr("手动列×行", "Manual cols × rows", "Ručno stup.×red.")}
-                        </button>
-                      </div>
-                      {gridKey === "custom" ? (
-                        <div className="flex gap-2 items-center text-sm flex-wrap">
-                          <label className="flex items-center gap-1">
-                            cols
-                            <input
-                              type="number"
-                              min={2}
-                              max={4}
-                              className="w-16 rounded border border-ink/20 px-2 py-1"
-                              value={customCols}
-                              onChange={(e) => setCustomCols(Number(e.target.value) || 2)}
-                            />
-                          </label>
-                          <label className="flex items-center gap-1">
-                            rows
-                            <input
-                              type="number"
-                              min={2}
-                              max={6}
-                              className="w-16 rounded border border-ink/20 px-2 py-1"
-                              value={customRows}
-                              onChange={(e) => setCustomRows(Number(e.target.value) || 2)}
-                            />
-                          </label>
-                          <span className="text-xs text-ink-light">{tr("槽位≤6", "≤6 slots", "≤6 slotova")}</span>
-                        </div>
-                      ) : null}
-                      {gridChoice === "custom" && dims.cols * dims.rows > MAX_SURFACE_SLOTS ? (
-                        <p className="text-xs text-red-600">{tr("网格槽位超过 6", "Too many slots (max 6)", "Previše slotova (max 6)")}</p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
               </>
             )}
 
@@ -350,7 +235,7 @@ export function SurfaceCreateWizard({
               <Button type="button" variant="outline" size="sm" onClick={() => setStep(1)}>
                 {tr("上一步", "Back", "Natrag")}
               </Button>
-              <Button type="button" size="sm" disabled={!canProceedStep2} onClick={() => setStep(3)}>
+              <Button type="button" size="sm" onClick={() => setStep(3)}>
                 {tr("下一步", "Next", "Dalje")}
               </Button>
             </div>

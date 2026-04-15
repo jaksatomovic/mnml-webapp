@@ -182,8 +182,8 @@ const moreModes = [
 const specs = [
   {
     icon: Cpu,
-    label: "ESP32-C3",
-    desc: "RISC-V 架构，WiFi 连接，超低功耗",
+    label: "ESP32-S3",
+    desc: "双核 Xtensa LX7，Wi‑Fi / 蓝牙，超低功耗",
   },
   {
     icon: Monitor,
@@ -272,13 +272,13 @@ export default async function Home() {
       ? specs
       : locale === "hr"
       ? [
-          { icon: Cpu, label: "ESP32-C3", desc: "RISC-V arhitektura, WiFi i niska potrošnja" },
+          { icon: Cpu, label: "ESP32-S3", desc: "Dvojezgreni Xtensa LX7, Wi‑Fi / Bluetooth, niska potrošnja" },
           { icon: Monitor, label: "4.2-inčni E-Paper", desc: "Osjećaj papira, bez odsjaja i idealno za stalni stolni prikaz" },
           { icon: Battery, label: "Litijska baterija", desc: "LiFePO4 baterija + Deep Sleep način rada" },
           { icon: DollarSign, label: "BOM < 220 CNY", desc: "Otvoren hardver za svakoga" },
         ]
       : [
-          { icon: Cpu, label: "ESP32-C3", desc: "RISC-V architecture, WiFi, low power" },
+          { icon: Cpu, label: "ESP32-S3", desc: "Dual-core Xtensa LX7, Wi‑Fi / Bluetooth, low power" },
           { icon: Monitor, label: "4.2-inch E-Paper", desc: "Paper-like, glare-free, and designed for calm desk display" },
           { icon: Battery, label: "Lithium Battery", desc: "LiFePO4 lithium battery + Deep Sleep mode" },
           { icon: DollarSign, label: "BOM < CNY 220", desc: "Open hardware for everyone" },
@@ -293,10 +293,10 @@ export default async function Home() {
             {/* Text */}
             <div className="animate-slide-up">
               <p className="text-sm text-ink-light tracking-widest uppercase mb-4">
-                Open Source &middot; ESP32-C3 &middot; E-Ink
+                Open Source &middot; ESP32-S3 &middot; E-Ink
               </p>
               <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-ink leading-tight mb-6">
-                {tr("墨鱼AI墨水屏", "InkSight", "InkSight")}
+                {tr("墨鱼AI墨水屏", "InkWell", "InkWell")}
                 <br />
                 <span className="text-ink-muted text-3xl md:text-4xl lg:text-5xl">
                   {tr("桌面上的多场景AI搭档", "Your Multi-Scenario AI Companion on Desk", "Tvoj višescenski AI suputnik na stolu")}
@@ -305,8 +305,8 @@ export default async function Home() {
               <p className="text-lg text-ink-light leading-relaxed mb-8 max-w-lg">
                 {tr(
                   "墨鱼AI墨水屏是一款支持在线刷机、设备配置、无设备预览与模式广场的 AI 电子墨水屏桌面伴侣。",
-                  "InkSight is an AI e-ink desk companion with one website for flashing, configuration, preview, and discovering new modes.",
-                  "InkSight je AI e-ink suputnik za stol s jednim webom za flashanje, konfiguraciju, preview i otkrivanje novih modova.",
+                  "InkWell is an AI e-ink desk companion with one website for flashing, configuration, preview, and discovering new modes.",
+                  "InkWell je AI e-ink suputnik za stol s jednim webom za flashanje, konfiguraciju, preview i otkrivanje novih modova.",
                 )}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -336,7 +336,7 @@ export default async function Home() {
               <div className="relative w-full max-w-md aspect-[4/3] rounded-xl border border-ink/10 overflow-hidden">
                 <Image
                   src={locale === "zh" ? "/images/intro.jpg" : "/images/intro_eng.jpg"}
-                  alt={tr("墨鱼AI墨水屏展示图", "InkSight product preview", "Pregled InkSight uređaja")}
+                  alt={tr("墨鱼AI墨水屏展示图", "InkWell product preview", "Pregled InkWell uređaja")}
                   fill
                   className="object-cover"
                   priority
@@ -400,7 +400,7 @@ export default async function Home() {
         <div className="mx-auto max-w-6xl px-6 py-20">
           <div className="text-center mb-14">
             <h2 className="font-serif text-3xl font-bold text-ink mb-3">
-              {tr("多种内容模式", "Rich Content Modes", "Bogati modovi sadržaja")}
+              {tr("多种内容小组件", "Rich Content Widgets", "Bogati widgeti sadržaja")}
             </h2>
             <p className="text-ink-light">
               {tr("从哲学思辨到烟火日常，总有一款属于你的「慢信息」，支持自定义模式，支持 AI 生成模式。", "From philosophy to daily life, there is always a slow-information mode for you.", "Od filozofije do svakodnevice, uvijek postoji jedan slow-information mod baš za tebe.")}
@@ -531,7 +531,7 @@ export default async function Home() {
         <div className="mx-auto max-w-6xl px-6 py-20 text-center">
           <Sparkles size={28} className="mx-auto text-ink-light mb-4" />
           <h2 className="font-serif text-3xl font-bold text-ink mb-4">
-            {tr("开始体验墨鱼AI墨水屏", "Start Your InkSight Journey", "Započni svoj InkSight put")}
+            {tr("开始体验墨鱼AI墨水屏", "Start Your InkWell Journey", "Započni svoj InkWell put")}
           </h2>
           <p className="text-ink-light mb-8 max-w-md mx-auto">
             {tr("无需编程基础，通过浏览器即可完成固件烧录。", "No coding required. Flash firmware directly in browser with an ESP32 and E-Ink panel.", "Bez potrebe za kodiranjem. Flashaj firmware izravno u pregledniku uz ESP32 i e-ink panel.")}

@@ -521,7 +521,7 @@ export default function ExperiencePage() {
         (typeof displayNameRaw === "string" && displayNameRaw.trim()) ||
         (typeof modeIdRaw === "string" && modeIdRaw.trim()) ||
         "";
-      const displayName = nameFromInput || nameFromDef || tr("自定义模式", "Custom Mode", "Prilagođeni mod");
+      const displayName = nameFromInput || nameFromDef || tr("自定义小组件", "Custom widget", "Prilagođeni widget");
       setPreviewModeNameOverride(displayName);
       setPreviewMode(displayName.toUpperCase().replace(/[^A-Z0-9_]/g, "_"));
       const res = await fetch("/api/modes/preview", {
@@ -565,7 +565,7 @@ export default function ExperiencePage() {
 
   const handleGenerateCustomModeAndPreview = async () => {
     if (!customDesc.trim()) {
-      showToast(tr("请输入模式描述", "Please enter a description for the mode", "Unesi opis moda"), "error");
+      showToast(tr("请输入小组件描述", "Please enter a description for the widget", "Unesi opis widgeta"), "error");
       return;
     }
     setCustomGenerating(true);
@@ -608,12 +608,12 @@ export default function ExperiencePage() {
           setCatalogItems(d.items);
         } else {
           console.error("[PREVIEW] Invalid catalog response:", d);
-          setModesError(t(locale, "preview.error.no_modes", "No modes data"));
+          setModesError(t(locale, "preview.error.no_modes", "No widget data"));
         }
       })
       .catch((err) => {
         console.error("[PREVIEW] Failed to load catalog:", err);
-        setModesError(t(locale, "preview.error.modes_unreachable", "Cannot load modes. Make sure backend is running."));
+        setModesError(t(locale, "preview.error.modes_unreachable", "Cannot load widgets. Make sure backend is running."));
         setCatalogItems([]);
       });
   }, [authChecked, locale]);
@@ -661,7 +661,7 @@ export default function ExperiencePage() {
       <div className="mb-6 rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.45)] backdrop-blur-xl flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-serif text-3xl font-bold text-ink mb-1">{t(locale, "preview.title", "No-device Demo")}</h1>
-          <p className="text-ink-light text-sm">{t(locale, "preview.subtitle", "Try modes and preview without a device.")}</p>
+          <p className="text-ink-light text-sm">{t(locale, "preview.subtitle", "Try widgets and preview without a device.")}</p>
         </div>
       </div>
 
@@ -671,7 +671,7 @@ export default function ExperiencePage() {
             <CardHeader>
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3">
-                  <CardTitle>{t(locale, "preview.panel.modes", "Modes")}</CardTitle>
+                  <CardTitle>{t(locale, "preview.panel.modes", "Widgets")}</CardTitle>
                   <ColorSelect value={previewColors} onChange={setPreviewColors} tr={(zh, en) => tr(zh, en)} />
                 </div>
                 <button
@@ -683,10 +683,10 @@ export default function ExperiencePage() {
                     setCustomGenerating(false);
                   }}
                   className="rounded-xl border border-dashed border-ink/20 bg-white px-3 py-2 text-sm flex items-center gap-2 text-ink-light hover:border-ink/40 hover:bg-paper-dark transition-colors"
-                  title={tr("新建自定义模式", "Create custom mode", "Izradi prilagođeni mod")}
+                  title={tr("新建自定义小组件", "Create custom widget", "Izradi prilagođeni widget")}
                 >
                   <Plus size={16} />
-                  <span>{tr("新建自定义模式", "Create custom mode", "Izradi prilagođeni mod")}</span>
+                  <span>{tr("新建自定义小组件", "Create custom widget", "Izradi prilagođeni widget")}</span>
                 </button>
               </div>
             </CardHeader>
@@ -699,7 +699,7 @@ export default function ExperiencePage() {
               ) : null}
 
               <ModeSection
-                title={t(locale, "preview.section.core", "Core modes")}
+                title={t(locale, "preview.section.core", "Core widgets")}
                 modes={coreModes}
                 currentMode={previewMode}
                 onPreview={applyModeAndPreview}
@@ -709,7 +709,7 @@ export default function ExperiencePage() {
               />
 
               <ModeSection
-                title={t(locale, "preview.section.more", "More modes")}
+                title={t(locale, "preview.section.more", "More widgets")}
                 modes={moreModes}
                 currentMode={previewMode}
                 onPreview={applyModeAndPreview}
@@ -720,7 +720,7 @@ export default function ExperiencePage() {
 
               {customModes.length ? (
                 <ModeSection
-                  title={t(locale, "preview.section.custom", "Custom modes")}
+                  title={t(locale, "preview.section.custom", "Custom widgets")}
                   modes={customModes}
                   currentMode={previewMode}
                   onPreview={applyModeAndPreview}
@@ -739,7 +739,7 @@ export default function ExperiencePage() {
               <CardTitle className="flex items-baseline justify-between gap-3 flex-wrap">
                 <span className="text-base font-semibold text-ink">{t(locale, "preview.panel.display", "E-Ink Preview")}</span>
                 <span className="text-base font-semibold text-ink">
-                  {t(locale, "preview.summary.current_mode", "Mode")}: {previewModeName}
+                  {t(locale, "preview.summary.current_mode", "Widget")}: {previewModeName}
                 </span>
               </CardTitle>
             </CardHeader>
@@ -757,7 +757,7 @@ export default function ExperiencePage() {
                     <div className="relative w-full max-w-md aspect-[4/3] bg-white border border-ink/20 rounded-xl overflow-hidden">
                       <Image
                         src={previewImageUrl}
-                        alt={t(locale, "preview.display.alt", "InkSight preview")}
+                        alt={t(locale, "preview.display.alt", "InkWell preview")}
                         fill
                         className="object-contain"
                         unoptimized
@@ -773,7 +773,7 @@ export default function ExperiencePage() {
                   <div className="flex items-center justify-center w-full">
                     <div className="text-center">
                       <Eye size={32} className="mx-auto text-ink-light mb-3" />
-                      <p className="text-sm text-ink-light">{t(locale, "preview.select_mode", tr("请选择模式", "Please select a mode", "Odaberi mod"))}</p>
+                      <p className="text-sm text-ink-light">{t(locale, "preview.select_mode", "Please select a widget")}</p>
                     </div>
                   </div>
                 ) : (
@@ -1312,12 +1312,12 @@ export default function ExperiencePage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader onClose={() => setShowCustomModeModal(false)}>
             <div>
-              <DialogTitle>{tr("创建自定义模式", "Create Custom Mode", "Izradi prilagođeni mod")}</DialogTitle>
+              <DialogTitle>{tr("创建自定义小组件", "Create Custom Widget", "Izradi prilagođeni widget")}</DialogTitle>
               <DialogDescription>
                 {tr(
-                  "用一句话描述你想要的模式，点击 AI 生成预览即可。",
-                  "Describe the mode you want, then click AI Generate Preview.",
-                  "U jednoj rečenici opiši mod koji želiš, zatim klikni AI Generate Preview.",
+                  "用一句话描述你想要的小组件，点击 AI 生成预览即可。",
+                  "Describe the widget you want, then click AI Generate Preview.",
+                  "U jednoj rečenici opiši widget koji želiš, zatim klikni AI Generate Preview.",
                 )}
               </DialogDescription>
             </div>
@@ -1327,7 +1327,7 @@ export default function ExperiencePage() {
             {customGenerating ? (
               <div className="rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm text-ink-light flex items-center gap-2">
                 <Loader2 size={16} className="animate-spin" />
-                {tr("模式生成中...", "Generating mode...", "Generiram mod...")}
+                {tr("小组件生成中...", "Generating widget...", "Generiram widget...")}
               </div>
             ) : null}
 
@@ -1337,9 +1337,9 @@ export default function ExperiencePage() {
               rows={3}
               maxLength={2000}
               placeholder={tr(
-                "描述你想要的模式，如：每天显示一个英语单词和释义，单词要大号字体居中",
-                "Describe your mode, e.g. show one English word and definition daily with a large centered font",
-                "Opiši svoj mod, npr. svakog dana prikaži jednu englesku riječ i definiciju velikim centriranim fontom",
+                "描述你想要的小组件，如：每天显示一个英语单词和释义，单词要大号字体居中",
+                "Describe your widget, e.g. show one English word and definition daily with a large centered font",
+                "Opiši svoj widget, npr. svakog dana prikaži jednu englesku riječ i definiciju velikim centriranim fontom",
               )}
               className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm resize-y bg-white"
               disabled={customGenerating}
@@ -1348,7 +1348,7 @@ export default function ExperiencePage() {
             <input
               value={customModeName}
               onChange={(e) => setCustomModeName(e.target.value)}
-              placeholder={tr("模式名称（例如：今日英语）", "Mode name (e.g. Daily English)", "Naziv moda (npr. Dnevni engleski)")}
+              placeholder={tr("小组件名称（例如：今日英语）", "Widget name (e.g. Daily English)", "Naziv widgeta (npr. Dnevni engleski)")}
               className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
               disabled={customGenerating}
             />

@@ -36,19 +36,6 @@ export function Navbar() {
     { href: "/docs", label: t(locale, "nav.docs") },
     { href: "/discover", label: t(locale, "nav.discover") },
     { href: "/flash", label: t(locale, "nav.flash") },
-    { href: "/config", label: t(locale, "nav.config") },
-    {
-      href: "/preview",
-      label: t(
-        locale,
-        "nav.preview",
-        pickByLocale(locale, {
-          en: "No-device Demo",
-          hr: "Demo Bez Uređaja",
-          zh: "无设备体验",
-        }),
-      ),
-    },
   ];
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -98,31 +85,37 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-ink/[0.07] bg-white/72 backdrop-blur-xl supports-backdrop-filter:bg-white/65 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+      <nav className="relative mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href={withLocalePath(locale, "/")} className="flex items-center gap-2 group">
           <Image 
             src="/images/logo.png" 
-            alt="InkSight Logo" 
+            alt="InkWell Logo" 
             width={32} 
             height={32} 
             className="rounded-[10px] object-contain shadow-sm ring-1 ring-black/4"
           />
           <span className="text-lg font-semibold text-ink tracking-tight">
-            InkSight
+            InkWell
           </span>
         </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={withLocalePath(locale, link.href)}
-              className="text-sm text-ink-light hover:text-ink transition-colors duration-200 rounded-lg px-1 -mx-1 py-0.5 hover:bg-ink/5"
-            >
-              {link.label}
-            </Link>
-          ))}
+        {/* Desktop nav links (centered) */}
+        <div className="pointer-events-none absolute left-1/2 hidden -translate-x-1/2 md:flex">
+          <div className="pointer-events-auto flex items-center gap-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={withLocalePath(locale, link.href)}
+                className="text-sm text-ink-light hover:text-ink transition-colors duration-200 rounded-lg px-1 -mx-1 py-0.5 hover:bg-ink/5"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop right actions */}
+        <div className="hidden md:flex items-center gap-4">
           <a
             href="https://github.com/datascale-ai/inksight"
             target="_blank"
@@ -134,7 +127,10 @@ export function Navbar() {
           {username ? (
             <UserDropdown locale={locale} username={username} onLogout={handleLogout} />
           ) : (
-            <Link href={withLocalePath(locale, "/login")} className="text-sm text-ink-light hover:text-ink transition-colors duration-200 rounded-lg px-2 py-1 hover:bg-ink/5">
+            <Link
+              href={withLocalePath(locale, "/login")}
+              className="text-sm text-ink-light hover:text-ink transition-colors duration-200 rounded-lg px-2 py-1 hover:bg-ink/5"
+            >
               {t(locale, "nav.login")}
             </Link>
           )}

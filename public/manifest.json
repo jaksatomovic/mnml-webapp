@@ -1,7 +1,7 @@
 {
-  "name": "InkSight Remote",
-  "short_name": "InkSight",
-  "description": "InkSight e-ink remote and device companion",
+  "name": "InkWell Remote",
+  "short_name": "InkWell",
+  "description": "InkWell e-ink remote and device companion",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fafaf7",

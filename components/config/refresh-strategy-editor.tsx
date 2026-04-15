@@ -53,13 +53,10 @@ export function RefreshStrategyEditor({
   customPersonaTone,
   setCustomPersonaTone,
   handleAddCustomPersona,
-  strategy,
-  setStrategy,
   refreshMin,
   setRefreshMin,
   toneOptions,
   personaPresets,
-  strategies,
 }: {
   tr: (zh: string, en: string, hr?: string) => string;
   locale: "zh" | "en" | "hr";
@@ -77,13 +74,10 @@ export function RefreshStrategyEditor({
   customPersonaTone: string;
   setCustomPersonaTone: (value: string) => void;
   handleAddCustomPersona: () => void;
-  strategy: string;
-  setStrategy: (value: string) => void;
   refreshMin: number;
   setRefreshMin: (value: number) => void;
   toneOptions: readonly { value: string; label: string; labelEn?: string; labelHr?: string }[];
   personaPresets: readonly string[];
-  strategies: Record<string, string>;
 }) {
   const customPresets = characterTones.filter(
     (value) => !personaPresets.includes(value),
@@ -111,7 +105,7 @@ export function RefreshStrategyEditor({
           <select
             value={timezoneValue}
             onChange={(e) => setTimezoneValue(e.target.value)}
-            className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm appearance-none bg-transparent"
+            className="ink-native-select w-full"
           >
             <option value="">{tr("跟随地点自动填写", "Use location / auto", "Koristi lokaciju / automatski")}</option>
             {TIMEZONE_OPTIONS.map((tz) => (
@@ -209,44 +203,21 @@ export function RefreshStrategyEditor({
             </div>
           )}
         </Field>
-        <Field label={tr("刷新策略", "Refresh Strategy", "Strategija osvježavanja")}>
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            {Object.entries(strategies).map(([key, desc]) => (
-              <button
-                key={key}
-                onClick={() => setStrategy(key)}
-                className={`group p-3 rounded-xl border text-left transition-colors ${
-                  strategy === key
-                    ? "border-ink bg-ink text-white"
-                    : "border-ink/10 hover:bg-ink hover:text-white"
-                }`}
-              >
-                <div className="text-sm font-medium">{key}</div>
-                <div
-                  className={`text-xs mt-1 ${
-                    strategy === key
-                      ? "text-white/70"
-                      : "text-ink-light group-hover:text-white/80"
-                  }`}
-                >
-                  {desc}
-                </div>
-              </button>
-            ))}
-          </div>
-          <label className="block text-sm font-medium mb-2">
-            {tr("刷新间隔 (分钟)", "Refresh interval (minutes)", "Interval osvježavanja (minute)")}
-          </label>
+        <Field label={tr("刷新间隔 (分钟)", "Refresh interval (minutes)", "Interval osvježavanja (minute)")}>
           <input
             type="number"
             min={10}
             max={1440}
             value={refreshMin}
             onChange={(e) => setRefreshMin(Number(e.target.value))}
-            className="w-32 rounded-xl border border-ink/20 px-3 py-2 text-sm"
+            className="ink-native-number w-32 text-right tabular-nums"
           />
           <p className="mt-2 text-xs text-ink-light">
-            {tr("可设置范围：10-1440 分钟", "Allowed range: 10-1440 minutes", "Dopušteni raspon: 10-1440 minuta")}
+            {tr(
+              "设备按此间隔拉取内容（10–1440 分钟）。Surface 播放节奏另在 Surfaces 中配置。",
+              "Device fetch cadence in minutes (10–1440). Surface rotation timing is configured under Surfaces.",
+              "Uređaj po ovom intervalu dohvaća sadržaj (10–1440 min). Rotaciju surfacea podešavaš u Surfaces.",
+            )}
           </p>
         </Field>
       </CardContent>

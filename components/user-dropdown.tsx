@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { User, ChevronDown, LogOut } from "lucide-react";
+import { User, ChevronDown, LogOut, Settings } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 import { t, withLocalePath } from "@/lib/i18n";
 import { useHoverDropdown } from "@/components/ui/use-hover-dropdown";
@@ -59,6 +59,15 @@ export function UserDropdown({ locale, username, onLogout }: UserDropdownProps) 
             >
               <User size={14} />
               {t(locale, "nav.userMenu.profile")}
+            </Link>
+            <Link
+              href={withLocalePath(locale, "/config")}
+              className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm text-ink-light transition-colors duration-200 hover:bg-ink/6 hover:text-ink"
+              role="menuitem"
+              onClick={closeMenu}
+            >
+              <Settings size={14} />
+              {t(locale, "nav.userMenu.settings")}
             </Link>
           </div>
 

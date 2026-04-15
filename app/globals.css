@@ -297,3 +297,55 @@ body {
   border-left: 3px solid var(--color-ink);
   background: rgba(26, 26, 26, 0.03);
 }
+
+/* Config / Surface editors: match native <select> and <input type="number"> to rounded inputs */
+@layer components {
+  .ink-native-select {
+    min-height: 2.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(26, 26, 26, 0.2);
+    background-color: #fff;
+    padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--color-ink);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 1rem 1rem;
+  }
+
+  .ink-native-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(26, 26, 26, 0.12);
+  }
+
+  .ink-native-text,
+  .ink-native-number {
+    min-height: 2.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(26, 26, 26, 0.2);
+    background-color: #fff;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--color-ink);
+  }
+
+  .ink-native-text:focus,
+  .ink-native-number:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(26, 26, 26, 0.12);
+  }
+
+  .ink-native-number {
+    -moz-appearance: textfield;
+  }
+
+  .ink-native-number::-webkit-outer-spin-button,
+  .ink-native-number::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}

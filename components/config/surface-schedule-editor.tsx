@@ -14,7 +14,8 @@ export interface SurfaceScheduleEditorProps {
   tr: (zh: string, en: string, hr?: string) => string;
 }
 
-function newBlock(): SurfaceScheduleBlock {
+/** Exported for the parent card header “Add block” action. */
+export function createDefaultScheduleBlock(): SurfaceScheduleBlock {
   return {
     id: `block_${Date.now().toString(36)}`,
     from: "07:00",
@@ -33,10 +34,6 @@ export function SurfaceScheduleEditor({ schedule, onChange, surfaceOptions, tr }
     },
     [onChange, schedule],
   );
-
-  const add = useCallback(() => {
-    onChange([...schedule, newBlock()]);
-  }, [onChange, schedule]);
 
   const remove = useCallback(
     (index: number) => {
@@ -59,11 +56,6 @@ export function SurfaceScheduleEditor({ schedule, onChange, surfaceOptions, tr }
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
-        <Button type="button" variant="outline" size="sm" className="text-xs" onClick={add}>
-          {tr("添加时段", "Add block", "Dodaj blok")}
-        </Button>
-      </div>
       {schedule.length === 0 ? (
         <p className="text-xs text-ink-light">{tr("暂无日程规则", "No schedule blocks yet", "Nema rasporeda")}</p>
       ) : (
@@ -81,12 +73,26 @@ export function SurfaceScheduleEditor({ schedule, onChange, surfaceOptions, tr }
                   <Trash2 size={16} />
                 </button>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
+                {DAY_KEYS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => toggleDay(index, d)}
+                    className={`min-w-[2.25rem] shrink-0 rounded-full px-2 py-1 text-[10px] font-medium uppercase tracking-wide border transition-colors ${
+                      block.days?.includes(d) ? "bg-ink text-white border-ink" : "bg-paper text-ink-light border-ink/15 hover:border-ink/30"
+                    }`}
+                  >
+                    {d.slice(0, 3)}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-3">
                 <label className="text-xs flex items-center gap-1">
                   {tr("从", "From", "Od")}
                   <input
                     type="time"
-                    className="rounded-lg border border-ink/20 px-2 py-1 text-sm"
+                    className="ink-native-text min-w-[7.25rem]"
                     value={block.from}
                     onChange={(e) => patch(index, { from: e.target.value })}
                   />
@@ -95,30 +101,16 @@ export function SurfaceScheduleEditor({ schedule, onChange, surfaceOptions, tr }
                   {tr("到", "To", "Do")}
                   <input
                     type="time"
-                    className="rounded-lg border border-ink/20 px-2 py-1 text-sm"
+                    className="ink-native-text min-w-[7.25rem]"
                     value={block.to}
                     onChange={(e) => patch(index, { to: e.target.value })}
                   />
                 </label>
               </div>
-              <div className="flex flex-wrap gap-1">
-                {DAY_KEYS.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => toggleDay(index, d)}
-                    className={`rounded-full px-2 py-0.5 text-[10px] uppercase border ${
-                      block.days?.includes(d) ? "bg-ink text-white border-ink" : "bg-paper text-ink-light border-ink/15"
-                    }`}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
               <label className="text-xs flex items-center gap-2">
                 {tr("类型", "Type", "Tip")}
                 <select
-                  className="rounded-lg border border-ink/20 px-2 py-1 text-sm flex-1 min-w-[120px]"
+                  className="ink-native-select flex-1 min-w-[140px]"
                   value={block.type}
                   onChange={(e) => {
                     const t = e.target.value as "surface" | "playlist";
@@ -145,7 +137,7 @@ export function SurfaceScheduleEditor({ schedule, onChange, surfaceOptions, tr }
               </label>
               {block.type === "surface" ? (
                 <select
-                  className="w-full rounded-lg border border-ink/20 px-2 py-2 text-sm"
+                  className="ink-native-select w-full"
                   value={block.surface_id || ""}
                   onChange={(e) => patch(index, { surface_id: e.target.value })}
                 >
@@ -161,7 +153,7 @@ export function SurfaceScheduleEditor({ schedule, onChange, surfaceOptions, tr }
                   {(block.playlist || []).map((pl, pi) => (
                     <div key={pi} className="flex flex-wrap gap-2 items-center">
                       <select
-                        className="flex-1 min-w-[120px] rounded-lg border border-ink/20 px-2 py-1 text-sm"
+                        className="ink-native-select flex-1 min-w-[140px]"
                         value={pl.surface_id}
                         onChange={(e) => {
                           const nextPl = [...(block.playlist || [])];
@@ -178,7 +170,7 @@ export function SurfaceScheduleEditor({ schedule, onChange, surfaceOptions, tr }
                       <input
                         type="number"
                         min={10}
-                        className="w-24 rounded-lg border border-ink/20 px-2 py-1 text-sm"
+                        className="ink-native-number w-28 shrink-0 text-right tabular-nums"
                         value={pl.duration_sec}
                         onChange={(e) => {
                           const nextPl = [...(block.playlist || [])];

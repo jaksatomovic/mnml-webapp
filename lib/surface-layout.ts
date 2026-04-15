@@ -55,7 +55,6 @@ const SLOT_TYPE_SPAN: Record<string, [number, number]> = {
   SMALL: [1, 1],
   WIDE: [2, 1],
   TALL: [1, 2],
-  LARGE: [2, 2],
 };
 
 function asInt(v: unknown, defaultVal: number): number {
@@ -67,15 +66,28 @@ export function inferSlotTypeFromSpan(w: number, h: number): string {
   if (w === 1 && h === 1) return "SMALL";
   if (w === 2 && h === 1) return "WIDE";
   if (w === 1 && h === 2) return "TALL";
-  if (w === 2 && h === 2) return "LARGE";
   return "CUSTOM";
+}
+
+/** Map deprecated ``LARGE`` to ``FULL`` or ``CUSTOM`` (same rules as backend ``normalize_legacy_slot_type``). */
+export function normalizeLegacySlotType(
+  slotType: string,
+  w: number,
+  h: number,
+  columns: number,
+  rows: number,
+): string {
+  const u = (slotType || "").trim().toUpperCase();
+  if (u === "LARGE") return deriveExpectedSlotType(w, h, columns, rows);
+  return u;
 }
 
 /** Canonical ``slot_type`` for a rectangle, including ``FULL`` when it covers the entire grid. */
 export function deriveExpectedSlotType(w: number, h: number, columns: number, rows: number): string {
-  const base = inferSlotTypeFromSpan(w, h);
-  if (base !== "CUSTOM") return base;
   if (w === columns && h === rows) return "FULL";
+  if (w === 1 && h === 1) return "SMALL";
+  if (w === 2 && h === 1) return "WIDE";
+  if (w === 1 && h === 2) return "TALL";
   return "CUSTOM";
 }
 
@@ -106,8 +118,13 @@ export function modeSupportsSlotTypeLiteral(
   expectedSlotType: string,
 ): boolean {
   if (!supported || supported.length === 0) return true;
-  const t = expectedSlotType.toUpperCase();
-  return supported.some((s) => String(s).trim().toUpperCase() === t);
+  let t = expectedSlotType.toUpperCase();
+  if (t === "LARGE") t = "FULL";
+  const norm = supported.map((s) => {
+    const u = String(s).trim().toUpperCase();
+    return u === "LARGE" ? "FULL" : u;
+  });
+  return norm.some((s) => s === t);
 }
 
 export type LayoutEditorCatalogItem = {
@@ -207,7 +224,7 @@ export function validateLayout(
     const y = asInt(s.y, -1);
     const w = asInt(s.w, 0);
     const h = asInt(s.h, 0);
-    const st = String(s.slot_type ?? "").trim().toUpperCase();
+    const st = normalizeLegacySlotType(String(s.slot_type ?? ""), w, h, columns, rows).trim().toUpperCase();
 
     if (x < 0 || y < 0 || w < 1 || h < 1) {
       err("INVALID_SLOT_DATA", `slot ${sid}: x,y must be ≥0 and w,h must be ≥1`, sid);
@@ -305,7 +322,7 @@ export function validateSurfaceSlots(
     const y = asInt(raw.y, -1);
     const w = asInt(raw.w, 0);
     const h = asInt(raw.h, 0);
-    const st = String(raw.slot_type || "").trim().toUpperCase();
+    const st = normalizeLegacySlotType(String(raw.slot_type || ""), w, h, cols, rs).trim().toUpperCase();
     const sid = String(raw.id || "?");
 
     if (x < 0 || y < 0 || w < 1 || h < 1) {
@@ -497,7 +514,7 @@ export function findValidPosition(
   return null;
 }
 
-export const SURFACE_SLOT_TYPES = ["SMALL", "WIDE", "TALL", "LARGE", "FULL", "CUSTOM"] as const;
+export const SURFACE_SLOT_TYPES = ["SMALL", "WIDE", "TALL", "FULL", "CUSTOM"] as const;
 
 /**
  * When editing layout only, carry over mode_id from existing surface slots by id; new slots stay empty until assigned.

@@ -30,7 +30,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { type Locale, pickByLocale, withLocalePath } from "@/lib/i18n";
 
 type TabId = "today" | "browse" | "create" | "device" | "me";
-type BrowseSegmentId = "history" | "favorites" | "modes";
+type BrowseSegmentId = "history" | "favorites" | "widgets";
 
 type CopyText = {
   zh: string;
@@ -99,23 +99,23 @@ const appTabs: TabDefinition[] = [
     title: { zh: "Today 首页", en: "Today Feed" },
     eyebrow: { zh: "沉浸式慢信息阅读", en: "Immersive slow-content reading" },
     summary: {
-      zh: "全屏卡片流承载每日慢信息，支持左右切换模式、下拉“墨韵”刷新、双击收藏和推送到设备。",
-      en: "A calm full-screen card feed for daily slow content, with mode swiping, ink refresh, favorite gestures, and device push.",
+      zh: "全屏卡片流承载每日慢信息，支持左右切换小组件、下拉“墨韵”刷新、双击收藏和推送到设备。",
+      en: "A calm full-screen card feed for daily slow content, with widget swiping, ink refresh, favorite gestures, and device push.",
     },
     accent: "#1A1A1A",
     icon: House,
     metrics: [
-      { label: { zh: "首屏模式", en: "Modes up front" }, value: "5+" },
+      { label: { zh: "首屏小组件", en: "Widgets up front" }, value: "5+" },
       { label: { zh: "刷新节奏", en: "Refresh cadence" }, value: "2s" },
       { label: { zh: "核心交互", en: "Core gestures" }, value: "4" },
     ],
     screens: [
-      { name: "TodayScreen", detail: { zh: "全屏内容卡片流，支持模式切换与即时预览。", en: "A full-screen card stream with mode switching and instant preview." }, api: ["GET /preview?persona={mode}", "GET /content/today"] },
+      { name: "TodayScreen", detail: { zh: "全屏内容卡片流，支持小组件切换与即时预览。", en: "A full-screen card stream with widget switching and instant preview." }, api: ["GET /preview?persona={mode}", "GET /content/today"] },
       { name: "ContentDetailSheet", detail: { zh: "底部详情面板呈现结构化文字、来源和分享动作。", en: "A bottom sheet for structured details, source text, and share actions." }, api: ["local cache"] },
       { name: "PushToDeviceSheet", detail: { zh: "从当前内容快速选择设备并推送。", en: "A quick target picker to send content to a device." }, api: ["POST /device/{mac}/apply-preview"] },
     ],
     interactions: [
-      { zh: "左右滑动切换模式，强调慢节奏和专注感。", en: "Swipe horizontally to move between modes with a deliberate pace." },
+      { zh: "左右滑动切换小组件，强调慢节奏和专注感。", en: "Swipe horizontally to move between widgets with a deliberate pace." },
       { zh: "下拉触发 2 秒“墨韵”刷新动画，替代快节奏 spinner。", en: "Pull to refresh with a 2-second ink ripple instead of a busy spinner." },
       { zh: "双击收藏，长按弹出 iOS Context Menu。", en: "Double tap to favorite, long-press for an iOS-style context menu." },
     ],
@@ -129,10 +129,10 @@ const appTabs: TabDefinition[] = [
     id: "browse",
     label: { zh: "发现", en: "Browse" },
     title: { zh: "Browse 发现", en: "Browse Hub" },
-    eyebrow: { zh: "历史、收藏、模式目录", en: "History, favorites, and mode catalog" },
+    eyebrow: { zh: "历史、收藏、小组件目录", en: "History, favorites, and widget catalog" },
     summary: {
-      zh: "通过三段式切换查看历史内容、收藏库与 22+ 模式目录，兼顾回看与探索。",
-      en: "A segmented browse surface for history, favorites, and a 22+ mode catalog.",
+      zh: "通过三段式切换查看历史内容、收藏库与 22+ 小组件目录，兼顾回看与探索。",
+      en: "A segmented browse surface for history, favorites, and a 22+ widget catalog.",
     },
     accent: "#8E8E93",
     icon: Compass,
@@ -142,19 +142,19 @@ const appTabs: TabDefinition[] = [
       { label: { zh: "内容回看", en: "Lookback" }, value: "50" },
     ],
     screens: [
-      { name: "BrowseScreen", detail: { zh: "历史、收藏、模式三段切换的总入口。", en: "Segmented control entry point for history, favorites, and modes." }, api: ["GET /device/{mac}/history", "GET /device/{mac}/favorites"] },
-      { name: "ModeCatalogScreen", detail: { zh: "按 3 列网格展示模式，支持启用与预览。", en: "A three-column mode grid with enable and preview actions." }, api: ["GET /modes"] },
+      { name: "BrowseScreen", detail: { zh: "历史、收藏、小组件三段切换的总入口。", en: "Segmented control entry point for history, favorites, and widgets." }, api: ["GET /device/{mac}/history", "GET /device/{mac}/favorites"] },
+      { name: "WidgetCatalogScreen", detail: { zh: "按 3 列网格展示小组件，支持启用与预览。", en: "A three-column widget grid with enable and preview actions." }, api: ["GET /modes"] },
       { name: "ContentDetailScreen", detail: { zh: "全屏详情承接长文、来源和复制。", en: "Full-screen detail view for long-form reading, source notes, and copy." }, api: ["local cache"] },
     ],
     interactions: [
       { zh: "按日期分组回看历史内容，收藏与历史共享卡片组件。", en: "Review content by day groupings, with shared history and favorite cards." },
-      { zh: "模式目录使用语义化 Lucide 图标，统一去掉 emoji。", en: "Use semantic Lucide icons throughout the mode catalog with no emoji." },
+      { zh: "小组件目录使用语义化 Lucide 图标，统一去掉 emoji。", en: "Use semantic Lucide icons throughout the widget catalog with no emoji." },
       { zh: "点击条目进入全屏详情，再决定分享、复制或推送。", en: "Open any entry into a full-screen detail page before sharing or sending." },
     ],
     apis: [
       { method: "GET", path: "/device/{mac}/history", note: { zh: "读取设备历史内容。", en: "Read device-side content history." } },
       { method: "GET", path: "/device/{mac}/favorites", note: { zh: "读取已收藏内容。", en: "Load favorited content." } },
-      { method: "GET", path: "/modes", note: { zh: "获取模式目录与启用状态。", en: "Fetch the mode catalog and enabled state." } },
+      { method: "GET", path: "/modes", note: { zh: "获取小组件目录与启用状态。", en: "Fetch the widget catalog and enabled state." } },
     ],
   },
   {
@@ -174,9 +174,9 @@ const appTabs: TabDefinition[] = [
       { label: { zh: "表单深度", en: "Editor depth" }, value: "Form" },
     ],
     screens: [
-      { name: "CreateScreen", detail: { zh: "AI 生成、模板、空白三种入口。", en: "Three entry paths: AI, template, and blank mode." }, api: ["—"] },
-      { name: "ModeEditorScreen", detail: { zh: "表单式编辑器，联动渲染预览。", en: "A structured editor with linked preview rendering." }, api: ["POST /modes/custom/preview", "POST /modes/custom"] },
-      { name: "AIGenerateScreen", detail: { zh: "通过自然语言描述生成新模式。", en: "Generate a mode from a natural-language prompt." }, api: ["POST /modes/generate"] },
+      { name: "CreateScreen", detail: { zh: "AI 生成、模板、空白三种入口。", en: "Three entry paths: AI, template, and blank widget." }, api: ["—"] },
+      { name: "WidgetEditorScreen", detail: { zh: "表单式编辑器，联动渲染预览。", en: "A structured editor with linked preview rendering." }, api: ["POST /modes/custom/preview", "POST /modes/custom"] },
+      { name: "AIGenerateScreen", detail: { zh: "通过自然语言描述生成新小组件。", en: "Generate a widget from a natural-language prompt." }, api: ["POST /modes/generate"] },
     ],
     interactions: [
       { zh: "中心按钮略高于 Tab Bar，使用墨色圆形背景和白色加号。", en: "The center tab rises above the bar with an ink-dark circle and a white plus sign." },
@@ -185,8 +185,8 @@ const appTabs: TabDefinition[] = [
     ],
     apis: [
       { method: "POST", path: "/modes/custom/preview", note: { zh: "提交临时表单并返回预览。", en: "Submit draft form data and return a preview." } },
-      { method: "POST", path: "/modes/custom", note: { zh: "保存自定义模式。", en: "Persist a custom mode." } },
-      { method: "POST", path: "/modes/generate", note: { zh: "基于 prompt 自动生成模式配置。", en: "Generate a new mode config from a prompt." } },
+      { method: "POST", path: "/modes/custom", note: { zh: "保存自定义小组件。", en: "Persist a custom widget." } },
+      { method: "POST", path: "/modes/generate", note: { zh: "基于 prompt 自动生成小组件配置。", en: "Generate a new widget config from a prompt." } },
     ],
   },
   {
@@ -207,17 +207,17 @@ const appTabs: TabDefinition[] = [
     ],
     screens: [
       { name: "DeviceListScreen", detail: { zh: "多设备列表与在线状态。", en: "A list of devices with online status." }, api: ["GET /user/devices", "GET /device/{mac}/state"] },
-      { name: "DeviceDetailScreen", detail: { zh: "仪表盘聚合锂电池电量、模式和内容预览。", en: "A dashboard with lithium battery level, mode, and current content preview." }, api: ["GET /device/{mac}/state", "GET /config/{mac}"] },
+      { name: "DeviceDetailScreen", detail: { zh: "仪表盘聚合锂电池电量、小组件和内容预览。", en: "A dashboard with lithium battery level, active widget, and current content preview." }, api: ["GET /device/{mac}/state", "GET /config/{mac}"] },
       { name: "ProvisioningScreen", detail: { zh: "蓝牙 4 步向导完成认领与 Wi-Fi 配置。", en: "A four-step BLE wizard for claiming and Wi-Fi setup." }, api: ["POST /device/{mac}/claim-token"] },
     ],
     interactions: [
-      { zh: "状态卡片优先显示锂电池、在线、当前模式，降低认知切换。", en: "Status cards foreground lithium battery level, connectivity, and active mode for quick scanning." },
+      { zh: "状态卡片优先显示锂电池、在线、当前小组件，降低认知切换。", en: "Status cards foreground lithium battery level, connectivity, and active widget for quick scanning." },
       { zh: "BLE 配网提供 QR 降级路径，避免固件尚未支持时卡死。", en: "BLE provisioning includes a QR fallback path for firmware gaps." },
       { zh: "固件和成员管理保持列表式信息架构，贴近 iOS 设置层级。", en: "Firmware and member management keep a settings-style list hierarchy." },
     ],
     apis: [
       { method: "GET", path: "/user/devices", note: { zh: "读取当前用户全部设备。", en: "Load all devices for the current user." }, isNew: true },
-      { method: "GET", path: "/device/{mac}/state", note: { zh: "设备状态、锂电池与模式概览。", en: "Device state with lithium battery and mode metadata." } },
+      { method: "GET", path: "/device/{mac}/state", note: { zh: "设备状态、锂电池与小组件概览。", en: "Device state with lithium battery and widget metadata." } },
       { method: "GET", path: "/firmware/releases/latest", note: { zh: "查询最新固件版本。", en: "Fetch the latest firmware release." } },
     ],
   },
@@ -263,12 +263,12 @@ const pageGroups: PageGroup[] = [
   },
   {
     group: { zh: "发现 Browse", en: "Browse" },
-    description: { zh: "历史、收藏、模式与内容详情。", en: "History, favorites, modes, and detail screens." },
+    description: { zh: "历史、收藏、小组件与内容详情。", en: "History, favorites, widgets, and detail screens." },
     screens: ["BrowseScreen", "ModeCatalogScreen", "ContentDetailScreen", "FavoriteCollectionScreen"],
   },
   {
     group: { zh: "创作 Create", en: "Create" },
-    description: { zh: "创建入口、模板选择与模式编辑。", en: "Entry, templates, and editing." },
+    description: { zh: "创建入口、模板选择与小组件编辑。", en: "Entry, templates, and widget editing." },
     screens: ["CreateScreen", "ModeEditorScreen", "AIGenerateScreen", "TemplatePickerScreen"],
   },
   {
@@ -320,7 +320,7 @@ const roadmap: Phase[] = [
     focus: { zh: "设备管理强化", en: "Deepen device management" },
     tasks: [
       { zh: "设备详情、配置表单、共享成员", en: "Device detail, config forms, and shared members" },
-      { zh: "模式切换、刷新控制、固件升级", en: "Mode switching, refresh control, and firmware update UI" },
+      { zh: "小组件切换、刷新控制、固件升级", en: "Widget switching, refresh control, and firmware update UI" },
     ],
   },
   {
@@ -360,8 +360,8 @@ const browseSegments = {
       { title: "微故事", body: "她把月光装进旧信封", time: "Pinned" },
     ],
   },
-  modes: {
-    label: { zh: "模式", en: "Modes" },
+  widgets: {
+    label: { zh: "小组件", en: "Widgets", hr: "Widgeti" },
     items: [
       { title: "诗词", body: "已启用", time: "Active" },
       { title: "天气", body: "已启用", time: "Active" },
@@ -373,7 +373,7 @@ const browseSegments = {
   },
 } satisfies Record<BrowseSegmentId, { label: CopyText; items: { title: string; body: string; time: string }[] }>;
 
-const modeIcons: { name: string; icon: LucideIcon }[] = [
+const widgetIcons: { name: string; icon: LucideIcon }[] = [
   { name: "诗词", icon: Feather },
   { name: "天气", icon: SunMedium },
   { name: "简报", icon: BookOpen },
@@ -527,7 +527,7 @@ function BrowsePhone({
     <div className="space-y-4">
       <div className="px-2 pt-1">
         <p className="font-serif text-[30px] font-semibold text-[#1A1A1A]">{tr(locale, { zh: "发现", en: "Browse", hr: "Pregled" })}</p>
-        <p className="mt-1 text-sm text-[#8E8E93]">{tr(locale, { zh: "历史、收藏、模式目录", en: "History, favorites, and modes", hr: "Povijest, favoriti i modovi" })}</p>
+        <p className="mt-1 text-sm text-[#8E8E93]">{tr(locale, { zh: "历史、收藏、小组件目录", en: "History, favorites, and widgets", hr: "Povijest, favoriti i widgeti" })}</p>
       </div>
 
       <div className="flex rounded-[14px] bg-white p-1 border border-[#E5E5EA]">
@@ -546,9 +546,9 @@ function BrowsePhone({
         })}
       </div>
 
-      {browseSegment === "modes" ? (
+      {browseSegment === "widgets" ? (
         <div className="grid grid-cols-3 gap-3">
-          {modeIcons.map(({ name, icon: Icon }, index) => (
+          {widgetIcons.map(({ name, icon: Icon }, index) => (
             <div key={name} className="rounded-[18px] border border-black/5 bg-white px-2 py-4 text-center shadow-[0_8px_18px_-24px_rgba(26,26,26,0.5)]">
               <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#F5F5F0] text-[#1A1A1A]">
                 <Icon size={18} strokeWidth={1.8} />
@@ -585,9 +585,9 @@ function BrowsePhone({
 
 function CreatePhone({ locale }: { locale: Locale }) {
   const createOptions = [
-    { icon: Sparkles, title: tr(locale, { zh: "AI 生成", en: "AI Generate", hr: "AI generiranje" }), desc: tr(locale, { zh: "一句描述生成新模式", en: "Describe a mood or ritual", hr: "Opiši raspoloženje ili ritual" }) },
+    { icon: Sparkles, title: tr(locale, { zh: "AI 生成", en: "AI Generate", hr: "AI generiranje" }), desc: tr(locale, { zh: "一句描述生成新小组件", en: "Describe a new widget in one line", hr: "Opiši novi widget u jednoj rečenici" }) },
     { icon: Palette, title: tr(locale, { zh: "模板套用", en: "Templates", hr: "Predlošci" }), desc: tr(locale, { zh: "基于成熟结构改写", en: "Start from a proven structure", hr: "Počni od provjerene strukture" }) },
-    { icon: PenTool, title: tr(locale, { zh: "空白模式", en: "Blank Mode", hr: "Prazan mod" }), desc: tr(locale, { zh: "从零配置字段与渲染", en: "Craft from scratch", hr: "Kreni od nule" }) },
+    { icon: PenTool, title: tr(locale, { zh: "空白小组件", en: "Blank widget", hr: "Prazan widget" }), desc: tr(locale, { zh: "从零配置字段与渲染", en: "Craft from scratch", hr: "Kreni od nule" }) },
   ];
 
   return (
@@ -614,7 +614,7 @@ function CreatePhone({ locale }: { locale: Locale }) {
       <div className="rounded-[22px] border border-black/5 bg-white p-4 shadow-[0_8px_18px_-24px_rgba(26,26,26,0.5)]">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-[#1A1A1A]">{tr(locale, { zh: "模式编辑器", en: "Mode editor", hr: "Uređivač moda" })}</p>
+            <p className="text-sm font-medium text-[#1A1A1A]">{tr(locale, { zh: "小组件编辑器", en: "Widget editor", hr: "Uređivač widgeta" })}</p>
             <p className="mt-1 text-xs text-[#8E8E93]">{tr(locale, { zh: "Prompt + 刷新策略 + 样式", en: "Prompt + schedule + style", hr: "Prompt + raspored + stil" })}</p>
           </div>
           <span className="rounded-full bg-[#F5F5F0] px-3 py-1 text-[11px] text-[#1A1A1A]">{tr(locale, { zh: "实时", en: "Live", hr: "Uživo" })}</span>
@@ -640,7 +640,7 @@ function CreatePhone({ locale }: { locale: Locale }) {
 
 function DevicePhone({ locale }: { locale: Locale }) {
   const rows = [
-    { label: tr(locale, { zh: "模式配置", en: "Mode config", hr: "Konfiguracija moda" }), value: tr(locale, { zh: "诗词", en: "Poetry", hr: "Poezija" }) },
+    { label: tr(locale, { zh: "小组件配置", en: "Widget config", hr: "Konfiguracija widgeta" }), value: tr(locale, { zh: "诗词", en: "Poetry", hr: "Poezija" }) },
     { label: tr(locale, { zh: "刷新策略", en: "Refresh strategy", hr: "Strategija osvježavanja" }), value: tr(locale, { zh: "随机 · 60分钟", en: "Random · 60m", hr: "Nasumično · 60 min" }) },
     { label: tr(locale, { zh: "LLM 提供商", en: "LLM provider", hr: "LLM pružatelj" }), value: "DeepSeek" },
     { label: tr(locale, { zh: "共享成员", en: "Members", hr: "Članovi" }), value: tr(locale, { zh: "2人", en: "2 users", hr: "2 korisnika" }) },
@@ -668,7 +668,7 @@ function DevicePhone({ locale }: { locale: Locale }) {
         </div>
         <div>
           <p className="text-2xl font-light text-[#1A1A1A]">{tr(locale, { zh: "诗词", en: "Poetry", hr: "Poezija" })}</p>
-          <p className="mt-1 text-[11px] text-[#8E8E93]">{tr(locale, { zh: "当前模式", en: "Mode", hr: "Mod" })}</p>
+          <p className="mt-1 text-[11px] text-[#8E8E93]">{tr(locale, { zh: "当前小组件", en: "Widget", hr: "Widget" })}</p>
         </div>
       </div>
 
@@ -700,7 +700,7 @@ function MePhone({ locale }: { locale: Locale }) {
     { icon: Bell, title: tr(locale, { zh: "通知", en: "Notifications", hr: "Obavijesti" }), subtitle: tr(locale, { zh: "每日 8:00 推送", en: "Daily at 8:00", hr: "Svaki dan u 8:00" }) },
     { icon: Languages, title: tr(locale, { zh: "语言", en: "Language", hr: "Jezik" }), subtitle: tr(locale, { zh: "中文 / English", en: "Chinese / English", hr: "Hrvatski / English" }) },
     { icon: Settings2, title: tr(locale, { zh: "缓存与隐私", en: "Cache & privacy", hr: "Cache i privatnost" }), subtitle: tr(locale, { zh: "本地缓存约 1.0 MB", en: "1.0 MB local cache", hr: "1.0 MB lokalnog cachea" }) },
-    { icon: ShieldCheck, title: tr(locale, { zh: "关于 InkSight", en: "About InkSight", hr: "O InkSightu" }), subtitle: tr(locale, { zh: "慢信息移动伴侣", en: "Zen-like mobile companion", hr: "Mobilni suputnik za spore informacije" }) },
+    { icon: ShieldCheck, title: tr(locale, { zh: "关于 InkWell", en: "About InkWell", hr: "O InkWellu" }), subtitle: tr(locale, { zh: "慢信息移动伴侣", en: "Zen-like mobile companion", hr: "Mobilni suputnik za spore informacije" }) },
   ];
 
   return (
@@ -756,9 +756,9 @@ export function MobileAppShowcase({ locale }: { locale: Locale }) {
             {tr(
               locale,
               {
-                zh: "把 InkSight 手机 App 设计文档，直接落成可浏览的产品原型。",
-                en: "InkSight mobile, translated from spec into a browsable product prototype.",
-                hr: "InkSight mobile pretvoren iz specifikacije u pregledan produktni prototip.",
+                zh: "把 InkWell 手机 App 设计文档，直接落成可浏览的产品原型。",
+                en: "InkWell mobile, translated from spec into a browsable product prototype.",
+                hr: "InkWell mobile pretvoren iz specifikacije u pregledan produktni prototip.",
               },
             )}
           </h1>

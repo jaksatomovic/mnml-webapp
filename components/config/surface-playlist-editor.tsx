@@ -39,49 +39,25 @@ export function SurfacePlaylistEditor({ playlist, onChange, surfaceOptions, tr }
     [onChange, playlist],
   );
 
-  const addSurface = useCallback(
-    (surfaceId: string) => {
-      const sid = surfaceId.trim();
-      if (!sid) return;
-      const next: SurfacePlaylistEntry[] = [
-        ...playlist,
-        { surface_id: sid, enabled: true, duration_sec: 300, order: playlist.length },
-      ];
-      onChange(next.map((p, order) => ({ ...p, order })));
-    },
-    [onChange, playlist],
-  );
-
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-[160px] flex-1">
-          <label className="text-[11px] text-ink-light block mb-1">
-            {tr("加入 Surface", "Add surface", "Dodaj surface")}
-          </label>
-          <select
-            className="w-full rounded-xl border border-ink/20 bg-white px-2 py-2 text-sm"
-            defaultValue=""
-            onChange={(e) => {
-              const v = e.target.value;
-              e.target.value = "";
-              if (v) addSurface(v);
-            }}
-          >
-            <option value="">{tr("选择…", "Choose…", "Odaberi…")}</option>
-            {surfaceOptions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <p className="text-[11px] text-ink-light">{tr("拖拽左侧手柄排序", "Drag the handle on each row to reorder.", "Povuci ručku za redoslijed.")}</p>
+      <p className="text-[11px] text-ink-light">
+        {tr(
+          "在 Surface 库卡片上用 + / − 加入或移出轮换；拖拽左侧手柄排序。",
+          "Use + / − on each surface card in the library to add or remove from rotation; drag the handle to reorder.",
+          "Na kartici surfacea u biblioteci koristi + / − za rotaciju; povuci ručku za redoslijed.",
+        )}
+      </p>
 
       <div className="space-y-2">
         {playlist.length === 0 ? (
-          <p className="text-xs text-ink-light">{tr("播放列表为空", "Playlist is empty", "Playlista je prazna")}</p>
+          <p className="text-xs text-ink-light">
+            {tr(
+              "播放列表为空。在上方 Surface 库卡片上点击 + 加入轮换。",
+              "Playlist is empty. Tap + on a surface card in the library above to add it.",
+              "Playlista je prazna. Klikni + na kartici surfacea u biblioteci gore.",
+            )}
+          </p>
         ) : (
           playlist.map((row, index) => (
             <div
@@ -119,7 +95,7 @@ export function SurfacePlaylistEditor({ playlist, onChange, surfaceOptions, tr }
                   type="number"
                   min={10}
                   step={10}
-                  className="w-20 rounded-lg border border-ink/20 px-2 py-1 text-sm"
+                  className="ink-native-number w-24 shrink-0 text-right tabular-nums"
                   value={row.duration_sec}
                   onChange={(e) => updateRow(index, { duration_sec: Math.max(10, Number(e.target.value) || 10) })}
                 />

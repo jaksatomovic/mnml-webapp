@@ -49,7 +49,7 @@ export function ModeSelector({
       <CardHeader>
         <div className="flex items-center gap-3">
           <CardTitle className="flex items-center gap-2">
-            <LayoutGrid size={18} /> {tr("内容模式", "Content Modes", "Modovi sadržaja")}
+            <LayoutGrid size={18} /> {tr("小组件", "Widgets", "Widgeti")}
           </CardTitle>
           {onColorsChange && previewColors !== undefined && (
             <ColorSelect value={previewColors} onChange={onColorsChange} tr={tr} />
@@ -59,7 +59,7 @@ export function ModeSelector({
       <CardContent>
         <ModeGrid
           tr={tr}
-          title={tr("核心模式", "Core Modes", "Glavni modovi")}
+          title={tr("核心小组件", "Core widgets", "Glavni widgeti")}
           modes={coreModes}
           selectedModes={selectedModes}
           onPreview={handleModePreview}
@@ -68,7 +68,7 @@ export function ModeSelector({
         />
         <ModeGrid
           tr={tr}
-          title={tr("更多模式", "More Modes", "Dodatni modovi")}
+          title={tr("更多小组件", "More widgets", "Dodatni widgeti")}
           modes={extraModes}
           selectedModes={selectedModes}
           onPreview={handleModePreview}
@@ -77,7 +77,7 @@ export function ModeSelector({
         />
         <ModeGrid
           tr={tr}
-          title={tr("自定义模式", "Custom Modes", "Prilagođeni modovi")}
+          title={tr("自定义小组件", "Custom widgets", "Prilagođeni widgeti")}
           modes={customModes}
           selectedModes={selectedModes}
           onPreview={handleModePreview}
@@ -94,7 +94,7 @@ export function ModeSelector({
                 setCustomModeName("");
               }}
               className="rounded-xl border border-dashed border-ink/20 bg-white px-3 py-2 h-[118px] flex flex-col items-center justify-center text-ink-light hover:border-ink/40 hover:bg-paper-dark transition-colors"
-              title={tr("新建自定义模式", "Create custom mode", "Izradi prilagođeni mod")}
+              title={tr("新建自定义小组件", "Create custom widget", "Izradi prilagođeni widget")}
             >
               <Plus size={18} className="mb-1" />
               <div className="text-[11px]">{tr("新建", "New", "Novo")}</div>
@@ -184,7 +184,7 @@ function ModeGrid({
                     type="button"
                     onClick={() => onApply(mode)}
                     className="col-span-2 px-2 text-[11px] sm:text-xs text-ink hover:bg-ink hover:text-white transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
-                    title={isSelected ? tr("移出轮播", "Remove from rotation", "Ukloni iz rotacije") : tr("加入轮播", "Add to rotation", "Dodaj u rotaciju")}
+                    title={isSelected ? tr("移出已启用", "Remove from enabled set", "Ukloni iz uključenih") : tr("加入已启用", "Add to enabled set", "Dodaj u uključene")}
                   >
                     {isSelected ? "-" : "+"}
                   </button>
@@ -193,7 +193,7 @@ function ModeGrid({
                       type="button"
                       onClick={() => onDelete(mode)}
                       className="px-2 text-[11px] sm:text-xs text-ink hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center"
-                      title={tr("删除模式", "Delete mode", "Izbriši mod")}
+                      title={tr("删除小组件", "Delete widget", "Izbriši widget")}
                     >
                       <Trash2 size={14} />
                     </button>

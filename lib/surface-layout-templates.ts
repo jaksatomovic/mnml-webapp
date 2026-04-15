@@ -29,7 +29,7 @@ export const SURFACE_LAYOUT_TEMPLATES: SurfaceLayoutTemplateMeta[] = [
   {
     id: "layout_1",
     label: { zh: "整屏", en: "Full", hr: "Cijeli ekran" },
-    slots: [{ id: "full", x: 0, y: 0, w: 2, h: 2, slot_type: "LARGE" }],
+    slots: [{ id: "full", x: 0, y: 0, w: 2, h: 2, slot_type: "FULL" }],
   },
   {
     id: "layout_2",
