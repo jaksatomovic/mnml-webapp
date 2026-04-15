@@ -1,1 +1,1 @@
-export { default } from "../../widget/page";
+export { default } from "@/app/widget/page";

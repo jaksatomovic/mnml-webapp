@@ -22,6 +22,8 @@ type ModeSelectorProps = {
   setCustomDesc: (value: string) => void;
   setCustomModeName: (value: string) => void;
   setCustomJson: (value: string) => void;
+  /** When set, the dashed “+” tile runs this instead of opening the legacy custom editor directly. */
+  onPlusClick?: () => void;
   previewColors?: number;
   onColorsChange?: (v: number) => void;
 };
@@ -41,6 +43,7 @@ export function ModeSelector({
   setCustomDesc,
   setCustomModeName,
   setCustomJson,
+  onPlusClick,
   previewColors,
   onColorsChange,
 }: ModeSelectorProps) {
@@ -88,6 +91,10 @@ export function ModeSelector({
             <button
               type="button"
               onClick={() => {
+                if (onPlusClick) {
+                  onPlusClick();
+                  return;
+                }
                 setEditingCustomMode(true);
                 setCustomJson("");
                 setCustomDesc("");

@@ -1,1 +1,1 @@
-export { default } from "../../mobile/page";
+export { default } from "@/app/mobile/page";

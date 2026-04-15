@@ -1,3 +1,3 @@
 "use client";
 
-export { default } from "../../config/error";
+export { default } from "@/app/config/error";

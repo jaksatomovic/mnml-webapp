@@ -1,1 +1,1 @@
-export { default } from "../../claim/page";
+export { default } from "@/app/claim/page";

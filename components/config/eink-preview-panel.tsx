@@ -23,6 +23,8 @@ export function EInkPreviewPanel({
   emptyStateHint,
   regenerateDisabled,
   showPreviewTitle = true,
+  /** When set, Regenerate uses this instead of requiring `previewModeLabel` (e.g. hide header label for SURFACE_* but keep regen). */
+  canRegenerateTarget,
 }: {
   tr: (zh: string, en: string, hr?: string) => string;
   previewModeLabel: string;
@@ -44,14 +46,23 @@ export function EInkPreviewPanel({
   regenerateDisabled?: boolean;
   /** When false, hides the left “E-Ink Preview”; optional right label still shows. */
   showPreviewTitle?: boolean;
+  canRegenerateTarget?: boolean;
 }) {
+  const regenAllowed =
+    canRegenerateTarget !== undefined ? canRegenerateTarget : Boolean(previewModeLabel?.trim());
   return (
     <Card className="w-full max-w-[400px] mx-auto">
       <CardHeader className={`pb-2 ${showPreviewTitle === false && !previewModeLabel ? "hidden" : ""}`}>
         {showPreviewTitle !== false ? (
-          <CardTitle className="flex items-baseline justify-between gap-3 flex-wrap">
+          <CardTitle
+            className={`flex items-baseline gap-3 flex-wrap ${previewModeLabel?.trim() ? "justify-between" : ""}`}
+          >
             <span className="text-base font-semibold text-ink">{tr("水墨屏预览", "E-Ink Preview", "E-Ink pregled")}</span>
-            <span className="text-base font-semibold text-ink">{previewModeLabel}</span>
+            {previewModeLabel?.trim() ? (
+              <span className="text-base font-semibold text-ink truncate max-w-[min(220px,55%)] text-right">
+                {previewModeLabel}
+              </span>
+            ) : null}
           </CardTitle>
         ) : previewModeLabel ? (
           <CardTitle className="flex justify-end">
@@ -107,7 +118,7 @@ export function EInkPreviewPanel({
               variant="outline"
               size="sm"
               onClick={onRegenerate}
-              disabled={!previewModeLabel || previewLoading || Boolean(regenerateDisabled)}
+              disabled={!regenAllowed || previewLoading || Boolean(regenerateDisabled)}
               className="bg-white text-ink border-ink/20 hover:bg-ink hover:text-white active:bg-ink active:text-white disabled:bg-white disabled:text-ink/50"
             >
               {tr("重新生成预览", "Regenerate Preview", "Ponovno generiraj pregled")}

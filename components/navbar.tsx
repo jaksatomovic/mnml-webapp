@@ -36,6 +36,7 @@ export function Navbar() {
     { href: "/docs", label: t(locale, "nav.docs") },
     { href: "/discover", label: t(locale, "nav.discover") },
     { href: "/flash", label: t(locale, "nav.flash") },
+    { href: "/studio", label: t(locale, "nav.studio") },
   ];
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);

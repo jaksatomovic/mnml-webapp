@@ -1,4 +1,4 @@
 "use client";
 
-export { default } from "../../preview/page";
+export { default } from "@/app/preview/page";
 

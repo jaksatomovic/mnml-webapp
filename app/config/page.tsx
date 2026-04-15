@@ -11,6 +11,7 @@ import { SurfaceLayoutDialog } from "@/components/config/surface-layout-dialog";
 import { SurfacePlaylistEditor } from "@/components/config/surface-playlist-editor";
 import { SurfaceScheduleEditor, createDefaultScheduleBlock } from "@/components/config/surface-schedule-editor";
 import { SurfaceCreateWizard } from "@/components/config/surface-create-wizard";
+import { AddWidgetDialog } from "@/components/plugin-install";
 import {
   normalizePlaylist,
   validatePlaylist,
@@ -889,7 +890,9 @@ function ConfigPageInner() {
   const [customPreviewImg, setCustomPreviewImg] = useState<string | null>(null);
   const [, setCustomPreviewLoading] = useState(false);
   const [editingCustomMode, setEditingCustomMode] = useState(false);
+  const [addWidgetDialogOpen, setAddWidgetDialogOpen] = useState(false);
   const [customEditorSource, setCustomEditorSource] = useState<"ai" | "manual" | null>(null);
+  const [customDefinitionLanguage, setCustomDefinitionLanguage] = useState<"zh" | "en" | "hr">("zh");
   const [previewModeLabelOverride, setPreviewModeLabelOverride] = useState<string | null>(null);
   const previewPanelRef = useRef<HTMLDivElement | null>(null);
   const surfacePanelRef = useRef<HTMLDivElement | null>(null);
@@ -2300,6 +2303,8 @@ function ConfigPageInner() {
       if (customModeName.trim()) {
         def.display_name = customModeName.trim();
       }
+
+      def.definition_language = customDefinitionLanguage;
       
       // Add mac to the request body
       def.mac = mac;
@@ -2967,10 +2972,7 @@ function ConfigPageInner() {
     setSurfaceSlotModal(null);
   }, [surfaceSlotModal, surfaceSlotModalMemo, surfaceSlotModalMode, updateSurfaceSlotMode]);
 
-  const surfaceSlotModalPickList = useMemo(
-    () => catalogItems.filter((it) => it.mode_id.toUpperCase() !== "MY_ADAPTIVE"),
-    [catalogItems],
-  );
+  const surfaceSlotModalPickList = useMemo(() => catalogItems, [catalogItems]);
 
   const surfaceSlotModalResolvedSlotType = useMemo(() => {
     if (!surfaceSlotModal || surfaceSlotModal.kind !== "grid") return null;
@@ -3359,17 +3361,24 @@ function ConfigPageInner() {
                     setCustomDesc={setCustomDesc}
                     setCustomModeName={setCustomModeName}
                     setCustomJson={setCustomJson}
+                    onPlusClick={() => setAddWidgetDialogOpen(true)}
                   />
 
                   <div ref={previewPanelRef}>
                   <EInkPreviewPanel
                     tr={tr}
-                    previewModeLabel={
-                      previewModeLabelOverride ||
-                      (previewMode
-                        ? (modeMeta[previewMode]?.name || customModeMeta[previewMode]?.name || previewMode)
-                        : tr("请选择小组件", "Select a widget", "Odaberi widget"))
-                    }
+                    previewModeLabel={(() => {
+                      if (!previewMode?.trim()) return "";
+                      const id = previewMode.toUpperCase();
+                      if (id.startsWith("SURFACE_")) return "";
+                      return (
+                        previewModeLabelOverride ||
+                        (modeMeta[previewMode]?.name ||
+                          customModeMeta[previewMode]?.name ||
+                          previewMode)
+                      );
+                    })()}
+                    canRegenerateTarget={Boolean(previewMode?.trim())}
                     previewLoading={previewLoading}
                     previewStatusText={previewStatusText}
                     previewImg={previewImg}
@@ -3385,17 +3394,61 @@ function ConfigPageInner() {
                     }
                     onRegenerate={() => handlePreview(previewMode, true)}
                     rightActions={
-                      <Button
-                        size="sm"
-                        onClick={handleSaveCustomMode}
-                        disabled={!(customEditorSource === "ai" && Boolean(customJson.trim()))}
-                      >
-                        {tr("保存小组件", "Save widget", "Spremi widget")}
-                      </Button>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <label className="flex items-center gap-1.5 text-[11px] text-ink-light whitespace-nowrap">
+                          <span>{tr("语言", "Language", "Jezik")}</span>
+                          <select
+                            className="rounded-md border border-ink/20 text-xs bg-white px-2 py-1 text-ink"
+                            value={customDefinitionLanguage}
+                            onChange={(e) =>
+                              setCustomDefinitionLanguage(e.target.value as "zh" | "en" | "hr")
+                            }
+                            disabled={!(customEditorSource === "ai" && Boolean(customJson.trim()))}
+                          >
+                            <option value="zh">中文 (zh)</option>
+                            <option value="en">English (en)</option>
+                            <option value="hr">Hrvatski (hr)</option>
+                          </select>
+                        </label>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveCustomMode}
+                          disabled={!(customEditorSource === "ai" && Boolean(customJson.trim()))}
+                        >
+                          {tr("保存小组件", "Save widget", "Spremi widget")}
+                        </Button>
+                      </div>
                     }
                   />
                   </div>
                 </div>
+
+                <AddWidgetDialog
+                  open={addWidgetDialogOpen}
+                  onClose={() => setAddWidgetDialogOpen(false)}
+                  devices={userDevices.map((d) => ({ mac: d.mac, nickname: d.nickname }))}
+                  defaultMac={mac || undefined}
+                  discoverHref={withLocalePath(locale, "/discover")}
+                  onInstalled={() => {
+                    void refreshCatalog();
+                    showToast(
+                      "Plugin installed. Enable it in your widget list and save to device when ready.",
+                      "success",
+                    );
+                  }}
+                  onCreateWithAI={() => {
+                    setCustomDesc("");
+                    setCustomModeName("");
+                    setCustomJson("");
+                    setCustomEditorSource(null);
+                    setCustomDefinitionLanguage(
+                      modeLanguage === "en" || modeLanguage === "hr" || modeLanguage === "zh"
+                        ? modeLanguage
+                        : "zh",
+                    );
+                    setEditingCustomMode(true);
+                  }}
+                />
 
                 <Dialog
                   open={editingCustomMode}
@@ -3410,13 +3463,10 @@ function ConfigPageInner() {
                       }}
                     >
                       <div>
-                        <DialogTitle>{tr("创建自定义小组件", "Create Custom Widget", "Izradi prilagođeni widget")}</DialogTitle>
+                        <DialogTitle>Create custom widget</DialogTitle>
                         <DialogDescription>
-                          {tr(
-                            "用一句话描述你想要的小组件，点击 AI 生成预览，右侧水墨屏会显示效果。",
-                            "Describe the widget you want, click AI Generate Preview, and the right E-Ink panel will show the result.",
-                            "U jednoj rečenici opiši widget koji želiš, klikni AI Generate Preview, a desni E-Ink panel će prikazati rezultat.",
-                          )}
+                          Describe the widget you want, run AI Generate Preview, and the E-Ink panel on the right shows the
+                          result.
                         </DialogDescription>
                       </div>
                     </DialogHeader>
@@ -3425,7 +3475,7 @@ function ConfigPageInner() {
                       {customGenerating ? (
                         <div className="rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm text-ink-light flex items-center gap-2">
                           <Loader2 size={16} className="animate-spin" />
-                          {tr("小组件生成中...", "Generating widget...", "Generiram widget...")}
+                          Generating widget…
                         </div>
                       ) : null}
                       <textarea
@@ -3436,11 +3486,7 @@ function ConfigPageInner() {
                         }}
                         rows={3}
                         maxLength={2000}
-                        placeholder={tr(
-                          "描述你想要的小组件，如：每天显示一个英语单词和释义，单词要大号字体居中",
-                          "Describe your widget, e.g. show one English word and definition daily with a large centered font",
-                          "Opiši svoj widget, npr. svaki dan prikaži jednu englesku riječ i definiciju s velikim centriranim fontom",
-                        )}
+                        placeholder="Describe your widget, e.g. one English word and definition daily, large centered font."
                         className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm resize-y bg-white"
                         disabled={customGenerating}
                       />
@@ -3451,7 +3497,7 @@ function ConfigPageInner() {
                           setCustomModeName(e.target.value);
                           setCustomEditorSource((v) => v || "manual");
                         }}
-                        placeholder={tr("小组件名称（例如：今日英语）", "Widget name (e.g. Daily English)", "Naziv widgeta (npr. Dnevni engleski)")}
+                        placeholder="Widget name (e.g. Daily English)"
                         className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                         disabled={customGenerating}
                       />
@@ -3464,12 +3510,12 @@ function ConfigPageInner() {
                         }}
                         disabled={customGenerating || !customDesc.trim()}
                       >
-                        {tr("AI 生成预览", "AI Generate Preview", "AI generiraj pregled")}
+                        AI generate preview
                       </Button>
 
                       {customEditorSource === "ai" ? (
                         <div className="text-[11px] text-ink-light">
-                          {tr("AI 生成的小组件可在右侧预览后直接保存。", "AI-generated widgets can be saved from the right preview panel.", "AI generirani widget možeš spremiti izravno iz desnog preview panela.")}
+                          AI-generated widgets can be saved from the right preview panel.
                         </div>
                       ) : null}
                     </div>

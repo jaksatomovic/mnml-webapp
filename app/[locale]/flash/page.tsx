@@ -1,1 +1,1 @@
-export { default } from "../../flash/page";
+export { default } from "@/app/flash/page";
