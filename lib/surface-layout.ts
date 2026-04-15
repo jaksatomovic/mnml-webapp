@@ -117,9 +117,9 @@ export function modeSupportsSlotTypeLiteral(
   supported: string[] | undefined | null,
   expectedSlotType: string,
 ): boolean {
-  if (!supported || supported.length === 0) return true;
   let t = expectedSlotType.toUpperCase();
   if (t === "LARGE") t = "FULL";
+  if (!supported || supported.length === 0) return t !== "FULL";
   const norm = supported.map((s) => {
     const u = String(s).trim().toUpperCase();
     return u === "LARGE" ? "FULL" : u;

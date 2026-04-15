@@ -31,12 +31,17 @@ export function Navbar() {
     const qs = searchParams.toString();
     return qs ? `${base}?${qs}` : base;
   };
+  const studioUrl = process.env.NEXT_PUBLIC_STUDIO_URL?.trim();
   const navLinks = [
     { href: "/", label: t(locale, "nav.home") },
     { href: "/docs", label: t(locale, "nav.docs") },
     { href: "/discover", label: t(locale, "nav.discover") },
     { href: "/flash", label: t(locale, "nav.flash") },
-    { href: "/studio", label: t(locale, "nav.studio") },
+    {
+      href: studioUrl || "/studio",
+      label: t(locale, "nav.studio"),
+      external: Boolean(studioUrl),
+    },
   ];
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -103,15 +108,27 @@ export function Navbar() {
         {/* Desktop nav links (centered) */}
         <div className="pointer-events-none absolute left-1/2 hidden -translate-x-1/2 md:flex">
           <div className="pointer-events-auto flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={withLocalePath(locale, link.href)}
-                className="text-sm text-ink-light hover:text-ink transition-colors duration-200 rounded-lg px-1 -mx-1 py-0.5 hover:bg-ink/5"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) =>
+              link.external ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-ink-light hover:text-ink transition-colors duration-200 rounded-lg px-1 -mx-1 py-0.5 hover:bg-ink/5"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={withLocalePath(locale, link.href)}
+                  className="text-sm text-ink-light hover:text-ink transition-colors duration-200 rounded-lg px-1 -mx-1 py-0.5 hover:bg-ink/5"
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
           </div>
         </div>
 
@@ -193,16 +210,29 @@ export function Navbar() {
       {mobileOpen && (
         <div className="md:hidden border-t border-ink/[0.07] bg-white/95 backdrop-blur-xl">
           <div className="flex flex-col px-6 py-4 space-y-3">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={withLocalePath(locale, link.href)}
-                className="text-sm text-ink-light hover:text-ink transition-colors py-1"
-                onClick={() => setMobileOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) =>
+              link.external ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-ink-light hover:text-ink transition-colors py-1"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={withLocalePath(locale, link.href)}
+                  className="text-sm text-ink-light hover:text-ink transition-colors py-1"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
             <a
               href="https://github.com/datascale-ai/inksight"
               target="_blank"

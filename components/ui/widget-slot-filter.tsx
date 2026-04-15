@@ -38,7 +38,10 @@ export function modeSupportsPreviewSlot(
   supported: string[] | null | undefined,
   slot: WidgetSlotType,
 ): boolean {
-  if (!supported || supported.length === 0) return true;
+  if (!supported || supported.length === 0) {
+    // FULL requires explicit declaration in mode JSON.
+    return slot !== "FULL";
+  }
   const norm = supported.map((s) => {
     const u = String(s).trim().toUpperCase();
     return u === "LARGE" ? "FULL" : u;

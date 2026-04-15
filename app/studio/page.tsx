@@ -6,6 +6,7 @@ import { localeFromPathname, pickByLocale } from "@/lib/i18n";
 export default function StudioPage() {
   const pathname = usePathname();
   const locale = localeFromPathname(pathname || "/");
+  const studioUrl = process.env.NEXT_PUBLIC_STUDIO_URL?.trim();
 
   const title = pickByLocale(locale, {
     zh: "Studio",
@@ -24,6 +25,18 @@ export default function StudioPage() {
       <section className="w-full rounded-3xl border border-ink/10 bg-white/80 p-8 shadow-sm">
         <h1 className="text-3xl font-semibold tracking-tight text-ink">{title}</h1>
         <p className="mt-3 max-w-3xl text-sm text-ink-light">{subtitle}</p>
+        {studioUrl ? (
+          <div className="mt-6">
+            <a
+              href={studioUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-xl border border-ink/20 px-4 py-2 text-sm text-ink transition-colors hover:bg-ink/5"
+            >
+              Open Studio
+            </a>
+          </div>
+        ) : null}
       </section>
     </main>
   );
