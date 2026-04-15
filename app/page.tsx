@@ -203,7 +203,7 @@ const specs = [
 ];
 
 const modeTextEn: Record<string, { label: string; desc: string; descLines?: string[] }> = {
-  DAILY: { label: "Daily", desc: "Quotes, book picks and curious facts", descLines: ["Quotes, book picks", "and curious facts"] },
+  DAILY: { label: "Daily", desc: "Quotes, book picks and curious facts", descLines: ["Quotes, book picks and", "curious facts"] },
   WEATHER: { label: "Weather", desc: "Live weather and trend board", descLines: ["Live weather and", "trend board"] },
   POETRY: { label: "Poetry", desc: "Classical poems with short notes", descLines: ["Classical poems", "with short notes"] },
   ARTWALL: { label: "Gallery", desc: "Seasonal black-and-white artwork", descLines: ["Seasonal B/W", "artwork"] },
@@ -413,7 +413,7 @@ export default async function Home() {
                 <Card className="group h-full p-3 md:p-4 border-black/10 bg-white/85 shadow-[0_14px_40px_-30px_rgba(0,0,0,0.55)] hover:border-black/20 transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="h-full p-0 text-center flex flex-col items-center">
                     <div>
-                      <div className="inline-flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-xl bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
+                      <div className="inline-flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-xl mb-2.5 text-ink transition-colors">
                         <mode.icon size={16} />
                       </div>
                       <h4 className="text-[10px] md:text-[11px] font-semibold text-ink tracking-wider uppercase mb-1">
@@ -447,7 +447,7 @@ export default async function Home() {
               <div key={mode.name} className="aspect-square">
                 <Card className="group h-full p-3 md:p-4 border-black/10 bg-white/85 shadow-[0_14px_40px_-30px_rgba(0,0,0,0.55)] hover:border-black/20 transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="h-full p-0 text-center flex flex-col items-center">
-                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
+                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl mb-2.5 text-ink transition-colors">
                       <mode.icon size={16} />
                     </div>
                     <h4 className="text-[9px] md:text-[10px] font-semibold text-ink tracking-wider uppercase mb-1">
@@ -484,7 +484,7 @@ export default async function Home() {
               <div key={mode.name} className="aspect-square">
                 <Card className="group h-full p-3 md:p-4 border-black/10 bg-white/85 shadow-[0_14px_40px_-30px_rgba(0,0,0,0.55)] hover:border-black/20 transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="h-full p-0 text-center flex flex-col items-center">
-                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-paper-dark mb-2.5 group-hover:bg-ink group-hover:text-white transition-colors">
+                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl mb-2.5 text-ink transition-colors">
                       <mode.icon size={16} />
                     </div>
                     <h4 className="text-[9px] md:text-[10px] font-semibold text-ink tracking-wider uppercase mb-1">
