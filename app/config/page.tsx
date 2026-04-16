@@ -493,20 +493,6 @@ interface DeviceStats {
   mode_frequency?: Record<string, number>;
 }
 
-interface UserProfileLlmConfig {
-  llm_access_mode?: "preset" | "custom_openai";
-  provider?: string;
-  model?: string;
-  api_key?: string;
-  base_url?: string;
-}
-
-interface UserProfileResponse {
-  free_quota_remaining?: number;
-  llm_config?: UserProfileLlmConfig | null;
-  llm_config_updated_at?: string;
-}
-
 type RuntimeMode = "active" | "interval" | "unknown";
 
 function ConfigPageInner() {
@@ -903,40 +889,54 @@ function ConfigPageInner() {
   const [apiKeysLoading, setApiKeysLoading] = useState(false);
   const [apiKeysSaving, setApiKeysSaving] = useState(false);
   const [apiKeysRemoving, setApiKeysRemoving] = useState(false);
-  const [freeQuotaRemaining, setFreeQuotaRemaining] = useState<number | null>(null);
   const [llmAccessModeDraft, setLlmAccessModeDraft] = useState<"preset" | "custom_openai">("preset");
   const [apiModelDraft, setApiModelDraft] = useState("");
   const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [apiKeyMaskedHint, setApiKeyMaskedHint] = useState("");
+  const [apiKeyConnected, setApiKeyConnected] = useState(false);
   const [apiBaseUrlDraft, setApiBaseUrlDraft] = useState("https://api.openai.com/v1");
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [apiKeyTesting, setApiKeyTesting] = useState(false);
-  const [apiKeysUpdatedAt, setApiKeysUpdatedAt] = useState("");
+  const [apiKeysDirty, setApiKeysDirty] = useState(false);
+  const isOpenAiApiMode = llmAccessModeDraft === "custom_openai";
+  const apiProviderLabel = isOpenAiApiMode
+    ? tr("OpenAI / 兼容", "OpenAI / Compatible", "OpenAI / kompatibilno")
+    : tr("DeepSeek（平台）", "DeepSeek (Managed)", "DeepSeek (upravljano)");
+  const apiModeHint = isOpenAiApiMode
+    ? tr(
+        "当前将使用 OpenAI 兼容接口；请确认 Base URL、模型和 API Key 均正确。",
+        "OpenAI-compatible mode is active; confirm Base URL, model, and API key.",
+        "Aktivan je OpenAI-kompatibilni način; provjeri Base URL, model i API ključ.",
+      )
+    : tr(
+        "当前将使用平台托管模型；你也可以填写自己的 Key 覆盖默认配额。",
+        "Managed provider mode is active; you can still provide your own key to override quota.",
+        "Aktivan je upravljani način; i dalje možeš unijeti vlastiti ključ za vlastitu kvotu.",
+      );
+  const apiKeyStatusLabel = apiKeyConnected
+    ? tr("已连接", "Connected", "Povezano")
+    : tr("未连接", "Not connected", "Nije povezano");
 
   const showToast = useCallback((msg: string, type: "success" | "error" | "info" = "info") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const loadUserApiKeys = useCallback(async () => {
+  const loadUserApiKeys = useCallback(async (force = false) => {
     if (!currentUser || !mac) return;
+    if (apiKeysDirty && !force) return;
     setApiKeysLoading(true);
     try {
-      const [profileRes, keyRes] = await Promise.all([
-        fetch("/api/user/profile", { headers: authHeaders() }),
-        fetch(`/api/config/${encodeURIComponent(mac)}/llm-key`, { headers: authHeaders() }),
-      ]);
-      if (!profileRes.ok) throw new Error("profile load failed");
-      const profile = (await profileRes.json()) as UserProfileResponse;
-      setFreeQuotaRemaining(typeof profile.free_quota_remaining === "number" ? profile.free_quota_remaining : null);
+      const keyRes = await fetch(`/api/config/${encodeURIComponent(mac)}/llm-key`, { headers: authHeaders() });
       if (!keyRes.ok) throw new Error("llm key load failed");
       const cfg = (await keyRes.json()) as Record<string, unknown>;
-      setApiKeysUpdatedAt("");
       if (!cfg || !cfg.has_api_key) {
         setLlmAccessModeDraft("preset");
         setApiModelDraft("deepseek-chat");
         setApiKeyDraft("");
         setApiKeyMaskedHint("");
+        setApiKeyConnected(false);
+        if (force) setApiKeysDirty(false);
         setApiBaseUrlDraft("https://api.openai.com/v1");
         return;
       }
@@ -951,12 +951,14 @@ function ConfigPageInner() {
       }
       setApiKeyDraft("");
       setApiKeyMaskedHint(String(cfg.api_key_masked || ""));
+      setApiKeyConnected(true);
+      if (force) setApiKeysDirty(false);
     } catch {
       showToast(tr("加载 API Keys 失败", "Failed to load API keys", "Učitavanje API ključeva nije uspjelo"), "error");
     } finally {
       setApiKeysLoading(false);
     }
-  }, [currentUser, mac, showToast, tr]);
+  }, [currentUser, mac, showToast, tr, apiKeysDirty]);
 
   const saveUserApiKeys = useCallback(async () => {
     if (!currentUser || !mac) return;
@@ -998,7 +1000,8 @@ function ConfigPageInner() {
         tr("API Keys 已保存，后续将优先使用你的 Key", "API keys saved. Your key will be used first.", "API ključevi su spremljeni. Tvoj ključ će se koristiti prioritetno."),
         "success",
       );
-      await loadUserApiKeys();
+      setApiKeyConnected(true);
+      await loadUserApiKeys(true);
     } catch (err) {
       showToast(
         err instanceof Error
@@ -1022,12 +1025,13 @@ function ConfigPageInner() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "delete failed");
       showToast(
-        tr("已移除 API Keys，系统将使用免费额度", "API keys removed. Free quota will be used.", "API ključevi su uklonjeni. Koristit će se besplatna kvota."),
+        tr("已移除 API Keys", "API keys removed.", "API ključevi su uklonjeni."),
         "success",
       );
       setApiKeyDraft("");
       setApiKeyMaskedHint("");
-      await loadUserApiKeys();
+      setApiKeyConnected(false);
+      await loadUserApiKeys(true);
     } catch (err) {
       showToast(
         err instanceof Error
@@ -1075,6 +1079,7 @@ function ConfigPageInner() {
         tr("连接测试成功", "Connection test successful", "Test povezivanja je uspješan"),
         "success",
       );
+      setApiKeyConnected(true);
     } catch (err) {
       showToast(
         err instanceof Error
@@ -4187,7 +4192,7 @@ function ConfigPageInner() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">
-                      {tr("API Keys 与额度", "API Keys & Quota", "API ključevi i kvota")}
+                      {tr("API Keys", "API Keys", "API ključevi")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -4198,22 +4203,39 @@ function ConfigPageInner() {
                       </div>
                     ) : null}
 
-                    <div className="rounded-xl border border-ink/10 bg-paper p-3 text-sm text-ink-light">
-                      {tr(
-                        "提示：保留免费额度机制；一旦你配置自己的 API Key，系统会优先使用你的 Key。",
-                        "Note: free quota remains available; once you configure your own API key, your key is used with priority.",
-                        "Napomena: besplatna kvota ostaje; kad postaviš vlastiti API ključ, koristi se prioritetno tvoj ključ.",
-                      )}
-                      <div className="mt-2 font-medium text-ink">
-                        {tr("当前免费额度", "Current free quota", "Trenutna besplatna kvota")}:{" "}
-                        {freeQuotaRemaining != null ? freeQuotaRemaining : "-"}
+                    <div
+                      className={`rounded-xl border px-3 py-2 text-sm ${
+                        apiKeyConnected
+                          ? "border-green-200 bg-green-50 text-green-800"
+                          : "border-ink/10 bg-paper text-ink-light"
+                      }`}
+                    >
+                      {apiKeyConnected
+                        ? tr("已连接：检测到已保存的 API Key", "Connected: saved API key detected", "Povezano: spremljeni API ključ je detektiran")
+                        : tr("未连接：尚未保存 API Key", "Not connected: no saved API key", "Nije povezano: nema spremljenog API ključa")}
+                    </div>
+
+                    <div className="rounded-xl border border-ink/10 bg-paper px-3 py-3 space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-ink-light">{tr("当前提供商", "Current provider", "Trenutni pružatelj")}</span>
+                        <span className="rounded-full bg-ink/10 px-2.5 py-1 text-xs font-medium text-ink">{apiProviderLabel}</span>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            apiKeyConnected ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {apiKeyStatusLabel}
+                        </span>
                       </div>
-                      <div className="mt-1 text-xs text-ink-light">
-                        {tr("上次更新", "Last updated", "Zadnje ažuriranje")}:{" "}
-                        {apiKeysUpdatedAt
-                          ? new Date(apiKeysUpdatedAt).toLocaleString(locale === "zh" ? "zh-CN" : locale === "hr" ? "hr-HR" : "en-US")
-                          : "-"}
-                      </div>
+                      <p className="text-xs text-ink-light">{apiModeHint}</p>
+                      {apiKeyMaskedHint ? (
+                        <div className="rounded-lg border border-ink/10 bg-white px-2.5 py-2">
+                          <div className="text-[11px] uppercase tracking-wide text-ink-light">
+                            {tr("已保存 Key（掩码）", "Saved key (masked)", "Spremljeni ključ (maskiran)")}
+                          </div>
+                          <div className="mt-1 font-mono text-xs text-ink break-all">{apiKeyMaskedHint}</div>
+                        </div>
+                      ) : null}
                     </div>
 
                     <Field label={tr("提供商模式", "Provider Mode", "Način pružatelja")}>
@@ -4223,7 +4245,11 @@ function ConfigPageInner() {
                             type="radio"
                             name="llm-mode"
                             checked={llmAccessModeDraft === "preset"}
-                            onChange={() => setLlmAccessModeDraft("preset")}
+                            onChange={() => {
+                              setLlmAccessModeDraft("preset");
+                              setApiKeyVisible(false);
+                              setApiKeysDirty(true);
+                            }}
                           />
                           {tr("DeepSeek（平台）", "DeepSeek (Managed)", "DeepSeek (upravljano)")}
                         </label>
@@ -4232,7 +4258,11 @@ function ConfigPageInner() {
                             type="radio"
                             name="llm-mode"
                             checked={llmAccessModeDraft === "custom_openai"}
-                            onChange={() => setLlmAccessModeDraft("custom_openai")}
+                            onChange={() => {
+                              setLlmAccessModeDraft("custom_openai");
+                              setApiKeyVisible(false);
+                              setApiKeysDirty(true);
+                            }}
                           />
                           {tr("OpenAI / 兼容", "OpenAI / Compatible", "OpenAI / kompatibilno")}
                         </label>
@@ -4248,7 +4278,10 @@ function ConfigPageInner() {
                         return (
                           <select
                             value={selectValue}
-                            onChange={(e) => setApiModelDraft(e.target.value)}
+                            onChange={(e) => {
+                              setApiModelDraft(e.target.value);
+                              setApiKeysDirty(true);
+                            }}
                             className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                           >
                             {orphan ? <option value={apiModelDraft}>{apiModelDraft}</option> : null}
@@ -4262,14 +4295,24 @@ function ConfigPageInner() {
                       })()}
                     </Field>
 
-                    {llmAccessModeDraft === "custom_openai" && (
+                    {isOpenAiApiMode && (
                       <Field label={tr("Base URL", "Base URL", "Base URL")}>
                         <input
                           value={apiBaseUrlDraft}
-                          onChange={(e) => setApiBaseUrlDraft(e.target.value)}
+                          onChange={(e) => {
+                            setApiBaseUrlDraft(e.target.value);
+                            setApiKeysDirty(true);
+                          }}
                           placeholder="https://api.openai.com/v1"
                           className="w-full rounded-xl border border-ink/20 px-3 py-2 text-sm bg-white"
                         />
+                        <p className="mt-1 text-xs text-ink-light">
+                          {tr(
+                            "OpenAI 官方地址示例：https://api.openai.com/v1",
+                            "Official OpenAI example: https://api.openai.com/v1",
+                            "Primjer službenog OpenAI URL-a: https://api.openai.com/v1",
+                          )}
+                        </p>
                       </Field>
                     )}
 
@@ -4278,7 +4321,10 @@ function ConfigPageInner() {
                         <input
                           type={apiKeyVisible ? "text" : "password"}
                           value={apiKeyDraft}
-                          onChange={(e) => setApiKeyDraft(e.target.value)}
+                          onChange={(e) => {
+                            setApiKeyDraft(e.target.value);
+                            setApiKeysDirty(true);
+                          }}
                           placeholder={
                             apiKeyMaskedHint
                               ? tr("已保存（输入新 Key 以替换）", "Saved (enter new key to replace)", "Spremljeno (upiši novi ključ za zamjenu)")
@@ -4322,7 +4368,7 @@ function ConfigPageInner() {
                         className="bg-white text-ink border-ink/20 hover:bg-ink hover:text-white"
                       >
                         {apiKeysRemoving ? <Loader2 size={14} className="animate-spin mr-1" /> : <Trash2 size={14} className="mr-1" />}
-                        {tr("移除并回退免费额度", "Remove and fallback to free quota", "Ukloni i vrati na besplatnu kvotu")}
+                        {tr("移除 API Keys", "Remove API Keys", "Ukloni API ključeve")}
                       </Button>
                     </div>
                   </CardContent>
