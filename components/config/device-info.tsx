@@ -65,9 +65,9 @@ export function DeviceInfo({
       {currentUserRole === "member" && (
         <p className="text-xs text-amber-700">
           {tr(
-            "Member 免费额度仅用于无设备预览，不用于设备端生成。",
-            "Member free quota only applies to device-free preview, not on-device generation.",
-            "Besplatna kvota za članove vrijedi samo za preview bez uređaja, ne za generiranje na uređaju.",
+            "成员仅可使用设备配置中的 API Key 进行生成。",
+            "Members can generate content only with API keys configured in Device Settings.",
+            "Članovi mogu generirati sadržaj samo s API ključevima postavljenim u postavkama uređaja.",
           )}
         </p>
       )}

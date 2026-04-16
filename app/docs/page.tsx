@@ -76,9 +76,9 @@ export default async function DocsPage() {
           <p className="callout-title">{tr("当前产品入口", "Where settings live", "Gdje su postavke")}</p>
           <p>
             {tr(
-              "当前版本中，设备配置页用于管理设备的展示行为与模式，个人信息页则用于管理 AI 算力（包括平台免费额度和自定义大模型 API Key）。",
-              "In the current version, use Device Configuration to manage device display behavior and modes, and Profile to manage AI compute resources, including platform free quota and custom LLM API keys.",
-              "U trenutnoj verziji koristite Device Configuration za upravljanje prikazom i modovima uređaja, a Profile za upravljanje AI resursima, uključujući besplatnu kvotu platforme i vlastite LLM API ključeve.",
+              "当前版本中，设备配置页用于管理设备展示行为、模式与 API Key；个人信息页仅用于账号资料。",
+              "In the current version, use Device Configuration to manage display behavior, modes, and API keys; Profile is only for account details.",
+              "U trenutnoj verziji Device Configuration služi za prikaz, modove i API ključeve; Profile je samo za podatke računa.",
             )}
           </p>
         </div>

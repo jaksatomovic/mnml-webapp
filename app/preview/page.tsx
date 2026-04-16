@@ -380,16 +380,6 @@ export default function ExperiencePage() {
       const res = await fetch(`/api/preview?${params.toString()}`, {
         headers: authHeaders(userLlmApiKey ? { "x-inksight-llm-api-key": userLlmApiKey } : undefined),
       });
-      if (res.status === 402) {
-        // Free quota is exhausted, so show the invitation-code modal.
-        const data = await res.json().catch(() => ({}));
-        if (data.requires_invite_code) {
-          setPendingPreviewMode(targetMode);
-          setShowInviteModal(true);
-          setPreviewLoading(false);
-          return;
-        }
-      }
       if (!res.ok) {
         const errText = await res.text().catch(() => "Unknown error");
         throw new Error(`${t(locale, "preview.error.preview_failed", "Preview failed")}: HTTP ${res.status} ${errText.substring(0, 120)}`);

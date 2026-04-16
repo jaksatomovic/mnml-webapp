@@ -819,7 +819,9 @@ function ConfigPageInner() {
 
   // Local image picker + upload flow for MY_ADAPTIVE, shared with /preview.
   const adaptiveFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [pendingAdaptiveAction, setPendingAdaptiveAction] = useState<null | { action: "preview" | "apply"; mode: string }>(null);
+  const [pendingAdaptiveAction, setPendingAdaptiveAction] = useState<
+    null | { action: "preview" | "apply"; mode: string; surfaceTarget?: SurfaceSlotModalState | null }
+  >(null);
   const [, setAdaptiveUploading] = useState(false);
 
   // Parameter modal, intentionally aligned with the /preview experience.
@@ -905,6 +907,7 @@ function ConfigPageInner() {
   const [llmAccessModeDraft, setLlmAccessModeDraft] = useState<"preset" | "custom_openai">("preset");
   const [apiModelDraft, setApiModelDraft] = useState("");
   const [apiKeyDraft, setApiKeyDraft] = useState("");
+  const [apiKeyMaskedHint, setApiKeyMaskedHint] = useState("");
   const [apiBaseUrlDraft, setApiBaseUrlDraft] = useState("https://api.openai.com/v1");
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [apiKeyTesting, setApiKeyTesting] = useState(false);
@@ -916,41 +919,47 @@ function ConfigPageInner() {
   }, []);
 
   const loadUserApiKeys = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser || !mac) return;
     setApiKeysLoading(true);
     try {
-      const res = await fetch("/api/user/profile", { headers: authHeaders() });
-      if (!res.ok) throw new Error("profile load failed");
-      const data = (await res.json()) as UserProfileResponse;
-      setFreeQuotaRemaining(typeof data.free_quota_remaining === "number" ? data.free_quota_remaining : null);
-      setApiKeysUpdatedAt(data.llm_config_updated_at || "");
-      const cfg = data.llm_config;
-      if (!cfg) {
+      const [profileRes, keyRes] = await Promise.all([
+        fetch("/api/user/profile", { headers: authHeaders() }),
+        fetch(`/api/config/${encodeURIComponent(mac)}/llm-key`, { headers: authHeaders() }),
+      ]);
+      if (!profileRes.ok) throw new Error("profile load failed");
+      const profile = (await profileRes.json()) as UserProfileResponse;
+      setFreeQuotaRemaining(typeof profile.free_quota_remaining === "number" ? profile.free_quota_remaining : null);
+      if (!keyRes.ok) throw new Error("llm key load failed");
+      const cfg = (await keyRes.json()) as Record<string, unknown>;
+      setApiKeysUpdatedAt("");
+      if (!cfg || !cfg.has_api_key) {
         setLlmAccessModeDraft("preset");
         setApiModelDraft("deepseek-chat");
         setApiKeyDraft("");
+        setApiKeyMaskedHint("");
         setApiBaseUrlDraft("https://api.openai.com/v1");
         return;
       }
-      const mode = (cfg.llm_access_mode || "preset") as "preset" | "custom_openai";
+      const mode = (String(cfg.llm_access_mode || "preset") || "preset") as "preset" | "custom_openai";
       setLlmAccessModeDraft(mode);
       if (mode === "custom_openai") {
-        setApiModelDraft(cfg.model || "gpt-4o-mini");
-        setApiBaseUrlDraft(cfg.base_url || "https://api.openai.com/v1");
+        setApiModelDraft(String(cfg.model || "gpt-4o-mini"));
+        setApiBaseUrlDraft(String(cfg.base_url || "https://api.openai.com/v1"));
       } else {
-        setApiModelDraft(cfg.model || "deepseek-chat");
+        setApiModelDraft(String(cfg.model || "deepseek-chat"));
         setApiBaseUrlDraft("https://api.openai.com/v1");
       }
-      setApiKeyDraft(cfg.api_key || "");
+      setApiKeyDraft("");
+      setApiKeyMaskedHint(String(cfg.api_key_masked || ""));
     } catch {
       showToast(tr("加载 API Keys 失败", "Failed to load API keys", "Učitavanje API ključeva nije uspjelo"), "error");
     } finally {
       setApiKeysLoading(false);
     }
-  }, [currentUser, showToast, tr]);
+  }, [currentUser, mac, showToast, tr]);
 
   const saveUserApiKeys = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser || !mac) return;
     setApiKeysSaving(true);
     try {
       const isOpenAiMode = llmAccessModeDraft === "custom_openai";
@@ -978,7 +987,7 @@ function ConfigPageInner() {
             image_base_url: "",
           };
 
-      const res = await fetch("/api/user/profile/llm", {
+      const res = await fetch(`/api/config/${encodeURIComponent(mac)}/llm-key`, {
         method: "PUT",
         headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(body),
@@ -1000,13 +1009,13 @@ function ConfigPageInner() {
     } finally {
       setApiKeysSaving(false);
     }
-  }, [currentUser, llmAccessModeDraft, apiModelDraft, apiKeyDraft, apiBaseUrlDraft, showToast, tr, loadUserApiKeys]);
+  }, [currentUser, mac, llmAccessModeDraft, apiModelDraft, apiKeyDraft, apiBaseUrlDraft, showToast, tr, loadUserApiKeys]);
 
   const removeUserApiKeys = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser || !mac) return;
     setApiKeysRemoving(true);
     try {
-      const res = await fetch("/api/user/profile/llm", {
+      const res = await fetch(`/api/config/${encodeURIComponent(mac)}/llm-key`, {
         method: "DELETE",
         headers: authHeaders(),
       });
@@ -1016,6 +1025,8 @@ function ConfigPageInner() {
         tr("已移除 API Keys，系统将使用免费额度", "API keys removed. Free quota will be used.", "API ključevi su uklonjeni. Koristit će se besplatna kvota."),
         "success",
       );
+      setApiKeyDraft("");
+      setApiKeyMaskedHint("");
       await loadUserApiKeys();
     } catch (err) {
       showToast(
@@ -1027,10 +1038,10 @@ function ConfigPageInner() {
     } finally {
       setApiKeysRemoving(false);
     }
-  }, [currentUser, showToast, tr, loadUserApiKeys]);
+  }, [currentUser, mac, showToast, tr, loadUserApiKeys]);
 
   const testUserApiKeys = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser || !mac) return;
     if (!apiKeyDraft.trim()) {
       showToast(tr("请先输入 API Key", "Please enter API key first", "Prvo unesi API ključ"), "error");
       return;
@@ -1053,7 +1064,7 @@ function ConfigPageInner() {
             api_key: apiKeyDraft.trim(),
           };
 
-      const res = await fetch("/api/user/profile/llm/test", {
+      const res = await fetch(`/api/config/${encodeURIComponent(mac)}/llm-key/test`, {
         method: "POST",
         headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload),
@@ -1074,7 +1085,7 @@ function ConfigPageInner() {
     } finally {
       setApiKeyTesting(false);
     }
-  }, [currentUser, apiKeyDraft, llmAccessModeDraft, apiModelDraft, apiBaseUrlDraft, showToast, tr]);
+  }, [currentUser, mac, apiKeyDraft, llmAccessModeDraft, apiModelDraft, apiBaseUrlDraft, showToast, tr]);
 
   useEffect(() => {
     if (currentUser) {
@@ -1811,16 +1822,12 @@ function ConfigPageInner() {
     switch (usageSource) {
       case "current_user_api_key":
         return tr("当前使用你的 API key", "Using your API key");
+      case "device_api_key":
+        return tr("当前使用设备 API key", "Using device API key", "Koristi se API ključ uređaja");
       case "owner_api_key":
         return ownerUsername
           ? tr(`当前使用 owner（${ownerUsername}）的 API key`, `Using ${ownerUsername}'s API key`)
           : tr("当前使用 owner 的 API key", "Using owner's API key");
-      case "owner_free_quota":
-        return ownerUsername
-          ? tr(`当前消耗 owner（${ownerUsername}）的免费额度`, `Using ${ownerUsername}'s free quota`)
-          : tr("当前消耗 owner 的免费额度", "Using owner's free quota");
-      case "current_user_free_quota":
-        return tr("当前消耗你的免费额度", "Using your free quota");
       default:
         return "";
     }
@@ -1845,13 +1852,6 @@ function ConfigPageInner() {
             requires_invite_code?: boolean;
             llm_mode_requires_quota?: boolean;
           };
-          if (intentData.requires_invite_code) {
-            setPreviewConfirm(null);
-            setShowInviteModal(true);
-            setPendingPreviewMode(m);
-            setPreviewStatusText(formatPreviewUsageText(intentData.usage_source));
-            return;
-          }
           if (!intentData.cache_hit && intentData.llm_mode_requires_quota) {
             setPreviewConfirm({
               mode: m,
@@ -1895,18 +1895,6 @@ function ConfigPageInner() {
               requires_invite_code?: boolean;
               usage_source?: string;
             };
-            if (data.requires_invite_code) {
-              settled = true;
-              stream.close();
-              previewStreamRef.current = null;
-              setPreviewConfirm(null);
-              setShowInviteModal(true);
-              setPendingPreviewMode(m);
-              setPreviewStatusText(formatPreviewUsageText(data.usage_source));
-              setPreviewLoading(false);
-              resolve();
-              return;
-            }
             settled = true;
             stream.close();
             previewStreamRef.current = null;
@@ -2157,8 +2145,8 @@ function ConfigPageInner() {
         const d = await res.json().catch(() => ({}));
         showToast(
           (d && d.error) || tr(
-            "您的免费额度已用完，请输入邀请码或在个人信息中配置自己的 API key。",
-            "Your free quota has been exhausted, please redeem an invitation code or configure your own API key in your profile.",
+            "您的免费额度已用完，请输入邀请码或在本设备 API Keys 中配置自己的 API key。",
+            "Your free quota has been exhausted, please redeem an invitation code or configure your own API key in this device's API Keys tab.",
             "Besplatna kvota je potrošena. Iskoristi kod pozivnice ili postavi vlastiti API ključ u profilu.",
           ),
           "error",
@@ -2227,8 +2215,8 @@ function ConfigPageInner() {
         const d = await res.json().catch(() => ({}));
         showToast(
           (d && d.error) || tr(
-            "您的免费额度已用完，请输入邀请码或在个人信息中配置自己的 API key。",
-            "Your free quota has been exhausted, please redeem an invitation code or configure your own API key in your profile.",
+            "您的免费额度已用完，请输入邀请码或在本设备 API Keys 中配置自己的 API key。",
+            "Your free quota has been exhausted, please redeem an invitation code or configure your own API key in this device's API Keys tab.",
             "Besplatna kvota je potrošena. Iskoristi kod pozivnice ili postavi vlastiti API ključ u profilu.",
           ),
           "error",
@@ -2893,6 +2881,7 @@ function ConfigPageInner() {
           surface: surfaceDef,
           w: SURFACE_PREVIEW_W,
           h: SURFACE_PREVIEW_H,
+          mode_overrides: modeOverrides,
         };
         if (mac?.trim()) body.mac = mac.trim();
         const res = await fetch("/api/preview/surface", {
@@ -2918,6 +2907,7 @@ function ConfigPageInner() {
       replaceSurfacePreviewImg,
       showToast,
       surfaceCatalog,
+      modeOverrides,
       surfaceLayoutEditorId,
       tr,
     ],
@@ -3032,6 +3022,12 @@ function ConfigPageInner() {
     switch (usageSource) {
       case "current_user_api_key":
         return tr("本次预览将使用你的 API key。是否继续？", "This preview will use your API key. Continue?");
+      case "device_api_key":
+        return tr(
+          "本次预览将使用设备 API key。是否继续？",
+          "This preview will use the device API key. Continue?",
+          "Ovaj pregled će koristiti API ključ uređaja. Nastaviti?",
+        );
       case "owner_api_key":
         return ownerUsername
           ? tr(`本次预览将使用 owner（${ownerUsername}）的 API key。是否继续？`, `This preview will use ${ownerUsername}'s API key. Continue?`)
@@ -3088,7 +3084,27 @@ function ConfigPageInner() {
             const url = await uploadLocalImage(f);
             const pending = pendingAdaptiveAction;
             setPendingAdaptiveAction(null);
-            await commitModalAction("MY_ADAPTIVE", pending?.action || "preview", { image_url: url } as ModeOverride);
+            const target = pending?.surfaceTarget;
+            if (target) {
+              if (target.kind === "grid") {
+                updateSurfaceSlotMode(
+                  target.surfaceId,
+                  { type: "grid", slotId: target.slotId },
+                  "MY_ADAPTIVE",
+                );
+              } else {
+                updateSurfaceSlotMode(
+                  target.surfaceId,
+                  { type: "legacy", position: target.position },
+                  "MY_ADAPTIVE",
+                );
+              }
+              setSurfaceSlotModalMode("MY_ADAPTIVE");
+              updateModeOverride("MY_ADAPTIVE", { image_url: url } as ModeOverride);
+              await fetchLiveSurfacePreview(target.surfaceId);
+            } else {
+              await commitModalAction("MY_ADAPTIVE", pending?.action || "preview", { image_url: url } as ModeOverride);
+            }
           } catch (err) {
             const msg = err instanceof Error ? err.message : tr("请选择一张本地图片", "Please choose a local image", "Odaberi lokalnu sliku");
             showToast(msg, "error");
@@ -3987,6 +4003,18 @@ function ConfigPageInner() {
                                               onClick={() => {
                                                 if (!canUse) return;
                                                 setSurfaceSlotModalMode(mid);
+                                                if (mid === "MY_ADAPTIVE") {
+                                                  setPendingAdaptiveAction({
+                                                    action: "preview",
+                                                    mode: mid,
+                                                    surfaceTarget: surfaceSlotModal,
+                                                  });
+                                                  adaptiveFileInputRef.current?.click();
+                                                  return;
+                                                }
+                                                if (requiresParamModal(mid)) {
+                                                  openParamModal(mid, "preview");
+                                                }
                                               }}
                                               className={`flex min-h-0 flex-1 flex-col justify-start overflow-hidden px-3 py-2 text-left transition-colors disabled:cursor-not-allowed ${
                                                 selected
@@ -4251,7 +4279,11 @@ function ConfigPageInner() {
                           type={apiKeyVisible ? "text" : "password"}
                           value={apiKeyDraft}
                           onChange={(e) => setApiKeyDraft(e.target.value)}
-                          placeholder={tr("输入你的 API Key", "Enter your API key", "Unesi svoj API ključ")}
+                          placeholder={
+                            apiKeyMaskedHint
+                              ? tr("已保存（输入新 Key 以替换）", "Saved (enter new key to replace)", "Spremljeno (upiši novi ključ za zamjenu)")
+                              : tr("输入你的 API Key", "Enter your API key", "Unesi svoj API ključ")
+                          }
                           className="w-full rounded-xl border border-ink/20 px-3 py-2 pr-10 text-sm bg-white font-mono"
                         />
                         <button
@@ -4844,9 +4876,9 @@ function ConfigPageInner() {
                       `Besplatna kvota vlasnika uređaja je potrošena. Obrati se ${ownerUsername || "vlasniku"} ili nastavi s pregledom bez uređaja.`,
                     )
                   : tr(
-                      "您的免费额度已用完。您可以输入邀请码获得50次免费LLM调用额度，也可以在个人信息中设置自己的 API key。",
-                      "Your free quota has been exhausted. You can enter an invitation code or configure your own API key in your profile.",
-                      "Besplatna kvota je potrošena. Unesi kod pozivnice ili postavi vlastiti API ključ u profilu.",
+                      "您的免费额度已用完。您可以输入邀请码获得50次免费LLM调用额度，也可以在本设备的 API Keys 中设置自己的 API key。",
+                      "Your free quota has been exhausted. You can enter an invitation code or configure your own API key in this device's API Keys tab.",
+                      "Besplatna kvota je potrošena. Unesi kod pozivnice ili postavi vlastiti API ključ u API Keys kartici ovog uređaja.",
                     )}
               </p>
               {currentUserRole === "member" ? (
@@ -4864,23 +4896,21 @@ function ConfigPageInner() {
                   <div className="p-3 rounded-xl border border-ink/20 bg-paper-dark">
                     <p className="text-xs text-ink-light mb-2">
                       {tr(
-                        "提示：如果您有自己的 API key，可以在个人信息中配置，这样就不会受到额度限制了。",
-                        "Tip: If you have your own API key, you can configure it in your profile to avoid quota limits.",
-                        "Savjet: ako imaš vlastiti API ključ, možeš ga postaviti u profilu i izbjeći ograničenja kvote.",
+                        "提示：如果您有自己的 API key，可以在本设备的 API Keys 中配置，这样就不会受到额度限制了。",
+                        "Tip: If you have your own API key, configure it in this device's API Keys tab to avoid quota limits.",
+                        "Savjet: ako imaš vlastiti API ključ, postavi ga u API Keys kartici ovog uređaja kako bi izbjegao ograničenja kvote.",
                       )}
                     </p>
-                    <Link href={withLocalePath(locale, "/profile")}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setShowInviteModal(false);
-                        }}
-                        className="w-full text-xs"
-                      >
-                        {tr("前往个人信息配置", "Go to Profile Settings", "Idi na postavke profila")}
-                      </Button>
-                    </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowInviteModal(false);
+                      }}
+                      className="w-full text-xs"
+                    >
+                      {tr("返回设备配置继续设置", "Back to Device Settings", "Natrag na postavke uređaja")}
+                    </Button>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink mb-1">
